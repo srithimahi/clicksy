@@ -7,6 +7,7 @@ type BoothProps = {
 function Booth({ onBack }: BoothProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [error, setError] = useState("");
+    const [photo, setPhoto] = useState<string | null>(null);
 
     useEffect(() => {
         let stream: MediaStream | null = null;
@@ -36,6 +37,7 @@ function Booth({ onBack }: BoothProps) {
             }
         }
 
+
         startCamera();
 
         return() => {
@@ -43,6 +45,32 @@ function Booth({ onBack }: BoothProps) {
             stream?.getTracks().forEach(track => track.stop());
         };
     }, []);
+
+    function capturePhoto() {
+        const video = videoRef.current;
+
+        if(!video || video.videoWidth === 0 ) {
+            return;
+        }
+
+        const canvas = document.createElement("canvas");
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const context = canvas.getContext("2d");
+
+        if(!context) {
+            return;
+        }
+
+        context.translate(canvas.width, 0);
+        context.scale(-1, 1);
+
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const image = canvas.toDataURL("image/png");
+        setPhoto(image);
+    }
 
     return (
         <main className="booth">
@@ -57,6 +85,20 @@ function Booth({ onBack }: BoothProps) {
                 muted
                 className="camera-preview"
             />
+
+            <button className="capture-button"
+                    onClick={capturePhoto}
+                    disabled={!!error}
+            >
+                Capture!
+            </button>
+
+            {photo && (
+                <div className="captured-photo">
+                    <h2>Your photos!</h2>
+                    <img src={photo} alt="Captured photobooth photo" />
+                </div>
+            )}
         </main>
     );
 }
