@@ -149,3 +149,104 @@ header p {
   border-radius: 15px;
   border: 3px solid #e8a5c2;
 }
+
+.capture-modes {
+  display: flex;
+  gap: 12px;
+}
+
+.capture-modes button {
+  padding: 12px 24px;
+  border: 2px solid #e8a5c2;
+  border-radius: 25px;
+  background: white;
+  color: #b4527c;
+  transition: all 0.2s ease;
+}
+
+.capture-modes button.selected {
+  background: #d76b9a;
+  border-color: #d76b9a;
+  color: white;
+}
+
+.photo-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: min(100%, 500px);
+}
+
+.photo-gallery img {
+  width: 100%;
+  border: 2px solid #e8a5c2;
+  border-radius: 12px;
+}
+
+.countdown-settings {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #a34771;
+}
+
+.countdown-settings button {
+  padding: 8px 16px;
+  background: white;
+  color: #b4527c;
+  border: 2px solid #e8a5c2;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.countdown-settings button.selected {
+  background: #d76b9a;
+  color: white;
+  border-color: #d76b9a;
+}
+
+.countdown-settings button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.camera-container {
+  position: relative;
+  width: min(100%, 650px);
+  aspect-ratio: 4 / 3;
+}
+
+.camera-container .camera-preview {
+  width: 100%;
+  height: 100%;
+  display: block;
+  box-sizing: border-box;
+}
+
+.countdown-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.countdown-overlay span {
+  color: white;
+  font-size: clamp(5rem, 15vw, 9rem);
+  font-weight: 800;
+  animation: countdown-pop 0.35s ease-out;
+}
+
+@keyframes countdown-pop {
+  from {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
