@@ -250,3 +250,10 @@ header p {
     opacity: 1;
   }
 }
+
+.strip-actions {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: center;
+}

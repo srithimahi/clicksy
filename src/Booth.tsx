@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { generateStrip } from "./strip";
 
 type BoothProps = {
     onBack: () => void;
@@ -148,6 +149,21 @@ function Booth({ onBack }: BoothProps) {
         setPhotos([]);
     }
 
+    async function downloadStrip() {
+        if(photos.length !== 4) return;
+
+        try {
+            const strip = await generateStrip(photos);
+            const link = document.createElement("a");
+
+            link.href = strip;
+            link.download = "clicksy"
+            link.click();
+        } catch(error) {
+            console.error("Could not generate strip:", error);
+        }
+    }
+
     return (
         <main className="booth">
             <button onClick={onBack}>Back</button>
@@ -228,11 +244,20 @@ function Booth({ onBack }: BoothProps) {
             </div>
 
             {photos.length === 4 && (
-                <button className="capture-button"
-                    onClick={resetSession}
-                >
-                    Start Over
-                </button>
+                <div className="strip-actions">
+                    <button
+                        className="capture-button"
+                        onClick={downloadStrip}
+                    >
+                        Download Strip
+                    </button>
+
+                    <button className="capture-button"
+                        onClick={resetSession}
+                    >
+                        Start Over
+                    </button>
+                </div>
             )}
         </main>
     );
