@@ -205,139 +205,157 @@ function Booth({ onBack }: BoothProps) {
         link.click();
     }
 
+    const isSessionComplete = photos.length === 4;
+
     return (
         <main className="booth">
             <button onClick={onBack}>Back</button>
             <h1>quick booth</h1>
+
             {error && <p>{error}</p>}
 
-            <div className="capture-modes">
-                <button className={mode === "manual" ? "selected" : ""}
-                    onClick={() => {
-                        resetSession();
-                        setMode("manual");
-                    }}
-                >
-                    Manual
-                </button>
+            {!isSessionComplete ? (
+                <section className="capture-stage">
+                    <div className="capture-modes">
+                        <button className={mode === "manual" ? "selected" : ""}
+                            onClick={() => {
+                                resetSession();
+                                setMode("manual");
+                            }}
+                        >
+                            Manual
+                        </button>
 
-                <button className={mode === "automatic" ? "selected" : ""}
-                    onClick={() => {
-                        resetSession();
-                        setMode("automatic");
-                    }}
-                >
-                    Automatic
-                </button>
-            </div>
-
-            <div className="countdown-settings">
-                <span>Countdown:</span>
-
-                {([3, 5, 10] as const).map((seconds) => (
-                    <button
-                        key={seconds}
-                        className={countdownLength === seconds ? "selected" : ""}
-                        disabled={isCapturing}
-                        onClick={() => setCountdownLength(seconds)}
-                    >
-                        {seconds}s
-                    </button>
-                ))}
-            </div>
-
-            <div className="camera-container">
-                <video ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="camera-preview"
-                />
-
-                {countdown !== null && (
-                    <div className="countdown-overlay">
-                        <span key={countdown}>{countdown}</span>
+                        <button className={mode === "automatic" ? "selected" : ""}
+                            onClick={() => {
+                                resetSession();
+                                setMode("automatic");
+                            }}
+                        >
+                            Automatic
+                        </button>
                     </div>
-                )}
-            </div>
 
-            <button className="capture-button"
-                onClick={startCapture}
-                disabled={!!error || isCapturing || photos.length >= 4}
-                >
-                {photos.length >= 4
-                    ? "Session Done!"
-                    : isCapturing
-                        ? "Taking Photos..."
-                        : mode === "automatic"
-                            ? "Start Session"
-                            : `Capture Photo ${photos.length + 1}/4`}
-            </button>
+                    <div className="countdown-settings">
+                        <span>Countdown:</span>
 
-            <div className="photo-gallery">
-                {photos.map((photo, index) => (
-                    <img
-                        key={index}
-                        src={photo}
-                        alt={`Captured photo ${index + 1}`}
-                    />
-                ))}
-            </div>
-
-            {photos.length === 4 && (
-                <div className="strip-customization">
-                    <h2>Pick a strip color!</h2>
-
-                    <div className="strip-colors">
-                        {stripColors.map((color) => (
-                            <button key={color.name}
-                                    type="button"
-                                    className={`strip-color ${
-                                        stripColor === color.hex ? "selected" : ""
-                                    }`}
-                                    style={{ backgroundColor: color.hex }}
-                                    onClick={() => setStripColor(color.hex)}
-                                    aria-label={`${color.name} strip color`}
-                                    aria-pressed={stripColor === color.hex}
-                                    title={color.name}
-                            />
+                        {([3, 5, 10] as const).map((seconds) => (
+                            <button key={seconds}
+                                className={countdownLength === seconds ? "selected" : ""}
+                                disabled={isCapturing}
+                                onClick={() => setCountdownLength(seconds)}
+                            >
+                                {seconds}s
+                            </button>
                         ))}
                     </div>
-                    <p>
-                        {stripColors.find((color) => color.hex === stripColor)?.name}
-                    </p>
-                </div>
-            )}
 
-            {photos.length === 4 && (
-                <div className="strip-preview-section">
-                    <h2>Your strip</h2>
-                    {isGenerating && <p>Creating your strip</p>}
-                    {stripPreview && !isGenerating && (
-                        <img src={stripPreview}
-                            alt="Perview of your strip!"
-                            className="strip-preview-image"
+                    <div className="camera-container">
+                        <video ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className="camera-preview"
                         />
-                    )}
-                </div>
-            )}
 
-            {photos.length === 4 && (
-                <div className="strip-actions">
-                    <button
-                        className="capture-button"
-                        onClick={downloadStrip}
-                        disabled={!stripPreview || isGenerating}
-                    >
-                        Download Strip
-                    </button>
+                        {countdown !== null && (
+                            <div className="countdown-overlay">
+                                <span key={countdown}>{countdown}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="photo-progress">
+                        {[0, 1, 2, 3].map((index) => (
+                            <div key={index}
+                                className={`progress-slot ${
+                                    photos[index] ? "filled" : ""
+                                }`}
+                            >
+                                {photos[index] ? (
+                                    <img src={photos[index]}
+                                        alt={`Photo ${index + 1}`}
+                                    />
+                                ) : (
+                                    <span>{index + 1}</span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
 
                     <button className="capture-button"
-                        onClick={resetSession}
+                        onClick={startCapture}
+                        disabled={!!error || isCapturing}
                     >
-                        Start Over
+                        {isCapturing
+                            ? "Taking photos..."
+                            : mode === "automatic"
+                                ? "Start Session"
+                                : `Capture Photo ${photos.length + 1}/4`}
                     </button>
-                </div>
+                </section>
+            ) : (
+                <section className="results-stage">
+                    <div className="results-heading">
+                        <h2>your moment.</h2>
+                        <p>four frames, one pretty memory</p>
+                    </div>
+
+                    <div className="results-layout">
+                        <div className="results-preview">
+                            {isGenerating && <p>Creating your strip</p>}
+
+                            {stripPreview && !isGenerating && (
+                                <img src={stripPreview}
+                                    alt="Preview of your photo strip"
+                                    className="strip-preview-image"
+                                />
+                            )}
+                        </div>
+
+                        <div className="results-controls">
+                            <h3>make it yours.</h3>
+                            <p>pick your color!</p>
+
+                            <div className="strip-colors">
+                                {stripColors.map((color) => (
+                                    <button key={color.name}
+                                        type="button"
+                                        className={`strip-color $(
+                                            stripColor === color.hex ? "selected" : ""    
+                                        )`}
+                                        style={{ backgroundColor: color.hex }}
+                                        onClick={() => setStripColor(color.hex)}
+                                        aria-label={`${color.name} strip color`}
+                                        aria-pressed={stripColor === color.hex}
+                                        title={color.name}
+                                    />
+                                ))}
+                            </div>
+
+                            <p className="selected-color-name">
+                                {stripColors.find(
+                                    (color) => color.hex === stripColor
+                                )?.name}
+                            </p>
+
+                            <div className="results-buttons">
+                                <button className="capture-button"
+                                    onClick={downloadStrip}
+                                    disabled={!stripPreview || isGenerating}
+                                >
+                                    Download Strip
+                                </button>
+
+                                <button className="retake-button"
+                                    onClick={resetSession}
+                                >
+                                    Start Over
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             )}
         </main>
     );
