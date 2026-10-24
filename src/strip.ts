@@ -1,5 +1,6 @@
 export async function generateStrip(
-    photos: string[]
+    photos: string[],
+    backgroundColor: string = "#ffffff"
 ): Promise<string> {
     if(photos.length !== 4) {
         throw new Error("A strip requires 4 photos, bud.");
@@ -23,7 +24,7 @@ export async function generateStrip(
         throw new Error("Canvas is not supported, sorry!");
     }
 
-    context.fillStyle = "#ffffff";
+    context.fillStyle = backgroundColor;
     context.fillRect(0, 0, width, height);
 
     for(let i = 0; i < photos.length; i++) {

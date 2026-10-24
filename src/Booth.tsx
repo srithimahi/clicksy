@@ -5,6 +5,14 @@ type BoothProps = {
     onBack: () => void;
 };
 
+const stripColors = [
+    { name: "Lily", hex: "#FFFFFF" },
+    { name: "Rose", hex: "#F8C8DC" },
+    { name: "Lavender", hex: "#E6D9FF" },
+    { name: "Daffodil", hex: "#FFF0B8" },
+    { name: "Dahlia", hex: "#292535" },
+];
+
 function Booth({ onBack }: BoothProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [error, setError] = useState("");
@@ -15,6 +23,10 @@ function Booth({ onBack }: BoothProps) {
     const [countdownLength, setCountdownLength] = useState<3 | 5 | 10>(3);
     const [countdown, setCountdown] = useState<number | null>(null);
     const [isCapturing, setIsCapturing] = useState(false);
+
+    const [stripColor, setStripColor] = useState("#FFFFFF");
+    const [stripPreview, setStripPreview] = useState<string | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const sessionRef = useRef(0);
     const capturingRef = useRef(false);
@@ -45,8 +57,7 @@ function Booth({ onBack }: BoothProps) {
                     setError("Could not access your camera");
                 }
             }
-        }
-
+        } 
 
         startCamera();
 
@@ -56,6 +67,39 @@ function Booth({ onBack }: BoothProps) {
             stream?.getTracks().forEach(track => track.stop());
         };
     }, []);
+
+    useEffect(() => {
+            let cancelled = false;
+            if (photos.length !== 4) {
+                return;
+            }
+
+            setStripPreview(null);
+
+            async function updatePreview() {
+                setIsGenerating(true);
+
+                try{
+                    const preview = await generateStrip(photos, stripColor);
+
+                    if(!cancelled) {
+                        setStripPreview(preview);
+                    }
+                } catch(error) {
+                    console.error("Could not generate preview:", error);
+                } finally {
+                    if(!cancelled) {
+                        setIsGenerating(false);
+                    }
+                }
+            }
+
+            updatePreview();
+
+            return() => {
+                cancelled = true;
+            };
+        }, [photos, stripColor]);
 
     function capturePhoto(): string | null {
         const video = videoRef.current;
@@ -147,21 +191,18 @@ function Booth({ onBack }: BoothProps) {
         setCountdown(null);
         setIsCapturing(false);
         setPhotos([]);
+        setStripPreview(null);
+        setIsGenerating(false);
     }
 
     async function downloadStrip() {
-        if(photos.length !== 4) return;
+        if(!stripPreview || isGenerating) return;
 
-        try {
-            const strip = await generateStrip(photos);
-            const link = document.createElement("a");
+        const link = document.createElement("a");
 
-            link.href = strip;
-            link.download = "clicksy"
-            link.click();
-        } catch(error) {
-            console.error("Could not generate strip:", error);
-        }
+        link.href = stripPreview;
+        link.download = "clicksy-strip.png";
+        link.click();
     }
 
     return (
@@ -244,10 +285,49 @@ function Booth({ onBack }: BoothProps) {
             </div>
 
             {photos.length === 4 && (
+                <div className="strip-customization">
+                    <h2>Pick a strip color!</h2>
+
+                    <div className="strip-colors">
+                        {stripColors.map((color) => (
+                            <button key={color.name}
+                                    type="button"
+                                    className={`strip-color ${
+                                        stripColor === color.hex ? "selected" : ""
+                                    }`}
+                                    style={{ backgroundColor: color.hex }}
+                                    onClick={() => setStripColor(color.hex)}
+                                    aria-label={`${color.name} strip color`}
+                                    aria-pressed={stripColor === color.hex}
+                                    title={color.name}
+                            />
+                        ))}
+                    </div>
+                    <p>
+                        {stripColors.find((color) => color.hex === stripColor)?.name}
+                    </p>
+                </div>
+            )}
+
+            {photos.length === 4 && (
+                <div className="strip-preview-section">
+                    <h2>Your strip</h2>
+                    {isGenerating && <p>Creating your strip</p>}
+                    {stripPreview && !isGenerating && (
+                        <img src={stripPreview}
+                            alt="Perview of your strip!"
+                            className="strip-preview-image"
+                        />
+                    )}
+                </div>
+            )}
+
+            {photos.length === 4 && (
                 <div className="strip-actions">
                     <button
                         className="capture-button"
                         onClick={downloadStrip}
+                        disabled={!stripPreview || isGenerating}
                     >
                         Download Strip
                     </button>
