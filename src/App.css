@@ -492,3 +492,23 @@ header p {
     max-width: 320px;
   }
 }
+
+.camera-flash {
+  position: absolute;
+  inset: 0;
+  background: white;
+  border-radius: 20px;
+  pointer-events: none;
+  z-index: 10;
+  animation: camera-flash-animation 180ms ease-out forwards;
+}
+
+@keyframes camera-flash-animation {
+  0% {
+    opacity: 0.95;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}

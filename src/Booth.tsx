@@ -28,6 +28,8 @@ function Booth({ onBack }: BoothProps) {
     const [stripPreview, setStripPreview] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
+    const [showFlash, setShowFlash] = useState(false);
+
     const sessionRef = useRef(0);
     const capturingRef = useRef(false);
 
@@ -165,7 +167,11 @@ function Booth({ onBack }: BoothProps) {
                 const image = capturePhoto();
                 if(!image) return;
 
+                setShowFlash(true);
+                await wait(180);
+
                 if(sessionRef.current !== sessionId) return;
+                setShowFlash(false);
 
                 setPhotos((previousPhotos) => {
                     if(previousPhotos.length >= 4) return previousPhotos;
@@ -193,6 +199,7 @@ function Booth({ onBack }: BoothProps) {
         setPhotos([]);
         setStripPreview(null);
         setIsGenerating(false);
+        setShowFlash(false);
     }
 
     async function downloadStrip() {
@@ -262,6 +269,10 @@ function Booth({ onBack }: BoothProps) {
                             <div className="countdown-overlay">
                                 <span key={countdown}>{countdown}</span>
                             </div>
+                        )}
+
+                        {showFlash && (
+                            <div className="camera-flash" aria-hidden="true"/>
                         )}
                     </div>
 
