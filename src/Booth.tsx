@@ -247,6 +247,14 @@ function Booth({ onBack }: BoothProps) {
         setRetakeIndex(index);
     }
 
+    function cancelRetake() {
+        if(isCapturing) {
+            return;
+        }
+
+        setRetakeIndex(null);
+    }
+
     return (
         <main className="booth">
             <button onClick={onBack}>Back</button>
@@ -256,25 +264,27 @@ function Booth({ onBack }: BoothProps) {
 
             {!isSessionComplete ? (
                 <section className="capture-stage">
-                    <div className="capture-modes">
-                        <button className={mode === "manual" ? "selected" : ""}
-                            onClick={() => {
-                                resetSession();
-                                setMode("manual");
-                            }}
-                        >
-                            Manual
-                        </button>
+                    {retakeIndex === null && (
+                        <div className="capture-modes">
+                            <button className={mode === "manual" ? "selected" : ""}
+                                onClick={() => {
+                                    resetSession();
+                                    setMode("manual");
+                                }}
+                            >
+                                Manual
+                            </button>
 
-                        <button className={mode === "automatic" ? "selected" : ""}
-                            onClick={() => {
-                                resetSession();
-                                setMode("automatic");
-                            }}
-                        >
-                            Automatic
-                        </button>
-                    </div>
+                            <button className={mode === "automatic" ? "selected" : ""}
+                                onClick={() => {
+                                    resetSession();
+                                    setMode("automatic");
+                                }}
+                            >
+                                Automatic
+                            </button>
+                        </div>
+                    )}
 
                     <div className="countdown-settings">
                         <span>Countdown:</span>
@@ -289,6 +299,23 @@ function Booth({ onBack }: BoothProps) {
                             </button>
                         ))}
                     </div>
+
+                    {retakeIndex !== null && (
+                        <div className="retake-heading">
+                            <h2>one more take.</h2>
+                            <p>retaking photo {retakeIndex + 1} of 4</p>
+                        </div>
+                    )}
+
+                    {retakeIndex !== null && (
+                        <button type="button"
+                            className="retake-button"
+                            onClick={cancelRetake}
+                            disabled={isCapturing}
+                        >
+                            Cancel your retake
+                        </button>
+                    )}
 
                     <div className="camera-container">
                         <video ref={videoRef}
@@ -314,6 +341,8 @@ function Booth({ onBack }: BoothProps) {
                             <div key={index}
                                 className={`progress-slot ${
                                     photos[index] ? "filled" : ""
+                                } ${
+                                    retakeIndex === index ? "retaking" : ""
                                 }`}
                             >
                                 {photos[index] ? (

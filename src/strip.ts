@@ -56,8 +56,11 @@ export async function generateStrip(
         );
     }
 
-    context.fillStyle = "#d76b9a";
-    context.font = "bold 38px Ariel";
+    context.fillStyle =
+        backgroundColor.toUpperCase() === "#292535"
+            ? "#FFFFFF"
+            : "#D76B9A";
+    context.font = "bold 38px 'Trebuchet MS', Ariel, sans-serif";
     context.textAlign = "center";
     context.fillText("clicksy", width / 2, height - 45);
 

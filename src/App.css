@@ -566,3 +566,23 @@ header p {
 .retake-thumbnail:hover {
   border-color: #B4527C;
 }
+
+.retake-heading {
+  text-align: center;
+}
+
+.retake-heading h2 {
+  color: #D76B9A;
+  font-size: 1.8rem;
+  margin: 0 0 6px;
+}
+
+.retake-heading p {
+  color: #A97891;
+  margin: 0;
+}
+
+.progress-slot.retaking {
+  border: 3px solid #D76B9A;
+  box-shadow: 0 0 0 4px rgba(215, 107, 154, 0.15);
+}
