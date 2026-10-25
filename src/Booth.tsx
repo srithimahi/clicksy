@@ -30,6 +30,7 @@ function Booth({ onBack }: BoothProps) {
 
     const [showFlash, setShowFlash] = useState(false);
     const [retakeIndex, setRetakeIndex] = useState<number | null>(null);
+    const [cameraReady, setCameraReady] = useState(false);
 
     const sessionRef = useRef(0);
     const capturingRef = useRef(false);
@@ -41,6 +42,7 @@ function Booth({ onBack }: BoothProps) {
             return;
         }
 
+        setCameraReady(false);
         let stream: MediaStream | null = null;
         let cancelled = false;
 
@@ -60,10 +62,15 @@ function Booth({ onBack }: BoothProps) {
 
                 if(videoRef.current) {
                     videoRef.current.srcObject = cameraStream;
+                    await videoRef.current.play();
+                    if(!cancelled && videoRef.current?.videoWidth) {
+                        setCameraReady(true);
+                    }
                 }
             } catch {
                 if(!cancelled) {
-                    setError("Could not access your camera");
+                    setCameraReady(false);
+                    setError("Could not access your camera. Please check your camera permissions")
                 }
             }
         }
@@ -323,7 +330,19 @@ function Booth({ onBack }: BoothProps) {
                             playsInline
                             muted
                             className="camera-preview"
+                            onLoadedData={() => {
+                                if(videoRef.current && videoRef.current.videoWidth > 0) {
+                                    setCameraReady(true);
+                                }
+                            }}
                         />
+
+                        {!cameraReady && !error && (
+                            <div className="camera-loading">
+                                <div className="camera-spinner"/>
+                                <p>getting your camera ready</p>
+                            </div>
+                        )}
 
                         {countdown !== null && (
                             <div className="countdown-overlay">
@@ -333,6 +352,12 @@ function Booth({ onBack }: BoothProps) {
 
                         {showFlash && (
                             <div className="camera-flash" aria-hidden="true"/>
+                        )}
+
+                        {error && (
+                            <div className="camera-loading">
+                                <p>{error}</p>
+                            </div>
                         )}
                     </div>
 
@@ -358,15 +383,18 @@ function Booth({ onBack }: BoothProps) {
 
                     <button className="capture-button"
                         onClick={startCapture}
-                        disabled={!!error || isCapturing}
+                        disabled={!!error || isCapturing || !cameraReady}
                     >
-                        {isCapturing
-                            ? "Taking Photos"
+                        {!cameraReady
+                          ? "Preparing camera"
+                          : isCapturing
+                            ? "Taking photos"
                             : retakeIndex !== null
-                                ? `Retake Photo ${retakeIndex + 1}`
+                                ? `Retake photo ${retakeIndex + 1}`
                                 : mode === "automatic"
-                                    ? "Start Session"
-                                    : `Capture Photo ${photos.length + 1}/4`}
+                                    ? "Start session"
+                                    : `Capture photo ${photos.length + 1}/4`
+                        }
                     </button>
                 </section>
             ) : (
