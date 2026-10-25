@@ -29,11 +29,18 @@ function Booth({ onBack }: BoothProps) {
     const [isGenerating, setIsGenerating] = useState(false);
 
     const [showFlash, setShowFlash] = useState(false);
+    const [retakeIndex, setRetakeIndex] = useState<number | null>(null);
 
     const sessionRef = useRef(0);
     const capturingRef = useRef(false);
 
+    const isSessionComplete = photos.length === 4 && retakeIndex === null;
+
     useEffect(() => {
+        if(isSessionComplete) {
+            return;
+        }
+
         let stream: MediaStream | null = null;
         let cancelled = false;
 
@@ -45,30 +52,29 @@ function Booth({ onBack }: BoothProps) {
                 });
 
                 if(cancelled) {
-                    cameraStream.getTracks().forEach(track => track.stop());
+                    cameraStream.getTracks().forEach((track) => track.stop());
                     return;
                 }
 
                 stream = cameraStream;
 
                 if(videoRef.current) {
-                    videoRef.current.srcObject = stream;
+                    videoRef.current.srcObject = cameraStream;
                 }
             } catch {
                 if(!cancelled) {
                     setError("Could not access your camera");
                 }
             }
-        } 
+        }
 
         startCamera();
 
         return() => {
             cancelled = true;
-            sessionRef.current++;
-            stream?.getTracks().forEach(track => track.stop());
+            stream?.getTracks().forEach((track) => track.stop());
         };
-    }, []);
+    }, [isSessionComplete]);
 
     useEffect(() => {
             let cancelled = false;
@@ -149,15 +155,23 @@ function Booth({ onBack }: BoothProps) {
     }
 
     async function startCapture() {
-        if(capturingRef.current || photos.length >= 4 || error
-            || !videoRef.current || videoRef.current.videoWidth === 0
+        if(
+            capturingRef.current ||
+            (photos.length >= 4 && retakeIndex === null) ||
+            error ||
+            !videoRef.current || 
+            videoRef.current.videoWidth === 0
         ) return;
 
         capturingRef.current = true;
         setIsCapturing(true);
 
         const sessionId = ++sessionRef.current;
-        const numberOfPhotos = mode === "automatic" ? 4 - photos.length : 1;
+        const numberOfPhotos = retakeIndex !== null 
+                                    ? 1
+                                    : mode === "automatic"
+                                        ? 4 - photos.length
+                                        : 1;
 
         try {
             for(let i = 0; i < numberOfPhotos; i++) {
@@ -174,9 +188,22 @@ function Booth({ onBack }: BoothProps) {
                 setShowFlash(false);
 
                 setPhotos((previousPhotos) => {
-                    if(previousPhotos.length >= 4) return previousPhotos;
+                    if(retakeIndex !== null) {
+                        return previousPhotos.map((photo, index) => 
+                            index === retakeIndex ? image: photo
+                        );
+                    }
+
+                    if(previousPhotos.length >= 4) {
+                        return previousPhotos;
+                    }
+
                     return [...previousPhotos, image];
                 });
+
+                if(retakeIndex !== null) {
+                    setRetakeIndex(null);
+                }
 
                 if(i < numberOfPhotos - 1) {
                     await wait(500);
@@ -192,7 +219,6 @@ function Booth({ onBack }: BoothProps) {
     }
 
     function resetSession() {
-        sessionRef.current++;
         capturingRef.current = false;
         setCountdown(null);
         setIsCapturing(false);
@@ -200,6 +226,7 @@ function Booth({ onBack }: BoothProps) {
         setStripPreview(null);
         setIsGenerating(false);
         setShowFlash(false);
+        setRetakeIndex(null);
     }
 
     async function downloadStrip() {
@@ -212,7 +239,13 @@ function Booth({ onBack }: BoothProps) {
         link.click();
     }
 
-    const isSessionComplete = photos.length === 4;
+    function retakePhoto(index: number) {
+        if(isCapturing || index < 0 || index >= photos.length) {
+            return;
+        }
+
+        setRetakeIndex(index);
+    }
 
     return (
         <main className="booth">
@@ -299,10 +332,12 @@ function Booth({ onBack }: BoothProps) {
                         disabled={!!error || isCapturing}
                     >
                         {isCapturing
-                            ? "Taking photos..."
-                            : mode === "automatic"
-                                ? "Start Session"
-                                : `Capture Photo ${photos.length + 1}/4`}
+                            ? "Taking Photos"
+                            : retakeIndex !== null
+                                ? `Retake Photo ${retakeIndex + 1}`
+                                : mode === "automatic"
+                                    ? "Start Session"
+                                    : `Capture Photo ${photos.length + 1}/4`}
                     </button>
                 </section>
             ) : (
@@ -349,6 +384,27 @@ function Booth({ onBack }: BoothProps) {
                                     (color) => color.hex === stripColor
                                 )?.name}
                             </p>
+
+                            <div className="retake-selection">
+                                <h3>not quite the moment?</h3>
+                                <p>pick a photo to retake</p>
+
+                                <div className="retake-thumbnails">
+                                    {photos.map((photo, index) => (
+                                        <button key={index}
+                                            type="button"
+                                            className="retake-thumbnail"
+                                            onClick={() => retakePhoto(index)}
+                                            aria-label={`Retake photo ${index + 1}`}
+                                        >
+                                            <img src={photo}
+                                                alt={`Photo ${index + 1}`}
+                                            />
+                                            <span>↻</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
                             <div className="results-buttons">
                                 <button className="capture-button"

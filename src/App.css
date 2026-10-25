@@ -512,3 +512,57 @@ header p {
     opacity: 0;
   }
 }
+
+.retake-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.retake-selection h3 {
+  font-size: 1.2rem;
+  color: #B4527C;
+}
+
+.retake-thumbnails {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.retake-thumbnail {
+  position: relative;
+  padding: 0;
+  border: 2px solid #E8A5C2;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 4 / 3;
+  background: white;
+}
+
+.retake-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.retake-thumbnail span {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: #D76B9A;
+  color: white;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: 22px;
+  place-items: center;
+}
+
+.retake-thumbnail:hover {
+  border-color: #B4527C;
+}
