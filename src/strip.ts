@@ -1,6 +1,7 @@
 export async function generateStrip(
     photos: string[],
-    backgroundColor: string = "#ffffff"
+    backgroundColor: string = "#ffffff",
+    filter: "none" | "warm" = "none"
 ): Promise<string> {
     if(photos.length !== 4) {
         throw new Error("A strip requires 4 photos, bud.");
@@ -27,6 +28,21 @@ export async function generateStrip(
     context.fillStyle = backgroundColor;
     context.fillRect(0, 0, width, height);
 
+    if(backgroundColor.toUpperCase() === "#FFF0D8") {
+        const squareSize = 24;
+        const stripeColor = "rgba(217, 167, 126, 0.22)";
+
+        context.fillStyle = stripeColor;
+
+        for(let x = 0; x < width; x += squareSize * 2) {
+            context.fillRect(x, 0, squareSize, height);
+        }
+
+        for(let y = 0; y < height; y += squareSize * 2) {
+            context.fillRect(0, y, width, squareSize);
+        }
+    }
+
     for(let i = 0; i < photos.length; i++) {
         const image = new Image();
         image.src = photos[i];
@@ -43,6 +59,12 @@ export async function generateStrip(
         const sourceX = (image.width - sourceWidth) / 2;
         const sourceY = (image.height - sourceHeight) / 2;
 
+        context.save();
+
+        if(filter === "warm") {
+            context.filter = "sepia(18%) saturate(115%) brightness(105%)";
+        }
+
         context.drawImage(
             image,
             sourceX,
@@ -54,6 +76,8 @@ export async function generateStrip(
             photoWidth,
             photoHeight
         );
+
+        context.restore();
     }
 
     context.fillStyle =

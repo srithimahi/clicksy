@@ -1,0 +1,16 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+
+  <!-- Soft strawberry milk base -->
+  <rect width="32" height="32" fill="#FFF2F5"></rect>
+
+  <!-- Vertical pink stripe -->
+  <rect x="0" y="0" width="16" height="32" fill="#F8C7D4" opacity="0.65"></rect>
+
+  <!-- Horizontal pink stripe -->
+  <rect x="0" y="0" width="32" height="16" fill="#F8C7D4" opacity="0.65"></rect>
+
+  <!-- Darker overlap -->
+  <rect x="0" y="0" width="16" height="16" fill="#EFA8BC" opacity="0.55"></rect>
+
+</svg>

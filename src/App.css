@@ -634,3 +634,509 @@ header p {
     animation: none;
   }
 }
+
+.studio-page {
+  min-height: 100vh;
+  padding: 28px 6% 80px;
+  background: #FFFAF8;
+  color: #473A3F;
+}
+
+.studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.studio-back {
+  border: none;
+  background: transparent;
+  color: #9B7681;
+  font: inherit;
+  cursor: pointer;
+}
+
+.studio-back:hover {
+  color: #D76B9A;
+}
+
+.studio-logo {
+  color: #D76B9A;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.studio-intro {
+  max-width: 1100px;
+  margin: 65px auto 45px;
+  text-align: center;
+}
+
+.studio-eyebrow,
+.studio-panel-label {
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  font-weight: 600;
+  color: #C68DA2;
+}
+
+.studio-intro h1 {
+  margin: 12px 0;
+  font-size: clamp(2.5rem, 5vh, 4rem);
+  letter-spacing: -2px;
+  color: #473A3F;
+}
+
+.studio-intro p {
+  color: #A18B91;
+  font-size: 0.95rem;
+}
+
+.studio-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.studio-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 650px;
+  padding: 45px;
+  background: #FFF0F2;
+  border: 1px solid #F4E1E6;
+  border-radius: 24px;
+}
+
+.studio-strip {
+  width: 190px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 12px 35px rgba(80, 45, 50, 0.12);
+}
+
+.studio-photo-placeholder {
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+  color: #C3AFB2;
+  font-size: 0.75rem;
+}
+
+.studio-strip-brand {
+  padding: 12px 0 6px;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.studio-sidebar {
+  padding: 28px;
+  background: white;
+  border: 1px solid #F1E5E8;
+  border-radius: 22px;
+}
+
+.studio-panel-heading h2 {
+  margin: 12px 0;
+  font-size: 1.45rem;
+}
+
+.studio-panel-heading p {
+  color: #A18B91;
+  line-height: 1.7;
+  font-size: 0.88rem;
+}
+
+.studio-theme-list {
+  margin-top: 25px;
+}
+
+.studio-theme-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px;
+  background: white;
+  border: 1px solid #F0E5E8;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.studio-theme-card.selected {
+  border-color: #D76B9A;
+  background: #FFF8FA;
+}
+
+.studio-theme-swatch {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #E8D9D0;
+  border-radius: 10px;
+}
+
+.studio-theme-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.studio-theme-arrow {
+  font-size: 0.7rem;
+  color: #B98A9B;
+}
+
+.studio-theme-details {
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid #F0E4E8;
+}
+
+.studio-theme-details p {
+  color: #8F7D83;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 800px) {
+  .studio-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-preview {
+    min-height: 520px;
+    padding: 30px;
+  }
+
+  .studio-intro {
+    margin-top: 45px;
+  }
+}
+
+.studio-strip-gingham {
+  background-image:
+    linear-gradient(90deg,
+    rgba(217, 167, 126, 0.24) 50%,
+    transparent 50%
+  ),
+  linear-gradient(
+    rgba(217, 167, 126, 0.24) 50%,
+    transparent 50%,
+  );
+
+  background-size: 24px 24px;
+  background-blend-mode: multiply;
+
+  border: 2px solid;
+}
+
+.studio-strip-gingham .studio-photo-placeholder {
+  border: 3px solid #FFFAF3;
+}
+
+.studio-preview-warm .studio-photo-placeholder {
+  filter: sepia(18%) saturate(115%) brightness(105%);
+}
+
+.studio-filter-control {
+  margin-top: 20px;
+}
+
+.studio-filter-control label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.studio-filter-control input {
+  accent-color: #D9A77E;
+}
+
+.studio-sticker-panel {
+  margin-top: 24px;
+}
+
+.studio-sticker-panel h2 {
+  font-size: 18px;
+  margin: 8px 0 16px;
+}
+
+.studio-sticker-list {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.studio-sticker-item {
+  width: 100px;
+  padding: 14px;
+  background: #FFFAF6;
+  border: 1px solid #EADBD2;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.studio-sticker-item img {
+  width: 55px;
+  height: 55px;
+}
+
+.studio-sticker-item span {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #885B42;
+}
+
+.studio-strip {
+  position: relative;
+
+  width: 190px;
+  min-width: 190px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.studio-sticker-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.studio-placed-sticker {
+  position: absolute;
+  width: 55px;
+  height: 55px;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  pointer-events: auto;
+  user-select: none;
+  touch-action: none;
+}
+
+.studio-placed-sticker.selected {
+  outline: 2px dashed #A86D3D;
+  outline-offset: 3px;
+}
+
+.studio-remove-sticker {
+  margin-top: 16px;
+  background: transparent;
+  border: 1px solid #D9A77E;
+  color: #885B42;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.studio-workspace {
+  align-items: start;
+}
+
+.studio-preview {
+  position: sticky;
+  top: 20px;
+  align-self: start;
+}
+
+.studio-sticker-layer {
+  z-index: 5;
+}
+
+.studio-placed-sticker {
+  z-index: 1;
+}
+
+.studio-preview {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.studio-sticker-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.studio-workspace {
+  grid-template-columns: minmax(0, 1fr) 340px;
+  align-items: start;
+}
+
+.studio-preview {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.studio-strip {
+  width: 285px;
+  min-width: 285px;
+  max-width: 285px;
+  flex: none;
+  box-sizing: border-box;
+}
+
+@media (max-width: 800px) {
+  .studio-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.studio-sticker-count {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #B98A9B;
+}
+
+.studio-size-control {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+  color: #885B42;
+  font-size: 13px;
+}
+
+.studio-size-control input {
+  width: 100%;
+  accent-color: #D9A77E;
+}
+
+.studio-size-control span {
+  color: #B98A9B;
+  font-size: 12px;
+}
+
+.studio-rotation-control {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  color: #885B42;
+  font-size: 13px;
+}
+
+.studio-rotation-control input {
+  width: 100%;
+  accent-color: #d9a77e;
+}
+
+.studio-rotation-control span {
+  color: #b98a9b;
+  font-size: 12px;
+}
+
+.studio-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+
+.studio-photo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.studio-sticker-wrapper {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+
+.studio-sticker-wrapper.selected {
+  outline: 2px dashed #b58ac6;
+  outline-offset: 2px;
+}
+
+.studio-sticker-wrapper:active {
+  cursor: grabbing;
+}
+
+.studio-sticker-wrapper .studio-placed-sticker {
+  position: static;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.studio-resize-handle,
+.studio-rotate-handle {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: white;
+  border: 2px solid #b58ac6;
+  touch-action: none;
+  z-index: 5;
+}
+
+.studio-resize-handle {
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: #ffffff;
+  border: 2px solid #b58ac6;
+  border-radius: 5px;
+  cursor: nwse-resize;
+  touch-action: none;
+  z-index: 10;
+}
+
+.studio-rotate-handle {
+  right: -28px;
+  top: -28px;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  color: #9866ad;
+  font-size: 20px;
+  line-height: 18px;
+  cursor: grab;
+}
+
+.studio-download-button {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  margin: 24px auto 0;
+  padding: 15px 24px;
+  border: 1px solid #c58dc6;
+  border-radius: 999px;
+  background: #e9b7c6;
+  color: #6f3f50;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.studio-download-button:hover {
+  background: #f2c8d4;
+  transform: translateY(-2px);
+}

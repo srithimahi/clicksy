@@ -3,6 +3,7 @@ import { generateStrip } from "./strip";
 
 type BoothProps = {
     onBack: () => void;
+    onOpenStudio: (photos: string[]) => void;
 };
 
 const stripColors = [
@@ -13,7 +14,7 @@ const stripColors = [
     { name: "Dahlia", hex: "#292535" },
 ];
 
-function Booth({ onBack }: BoothProps) {
+function Booth({ onBack, onOpenStudio }: BoothProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [error, setError] = useState("");
     type CaptureMode = "automatic" | "manual";
@@ -470,6 +471,12 @@ function Booth({ onBack }: BoothProps) {
                                 >
                                     Download Strip
                                 </button>
+
+                                {photos.length === 4 && (
+                                    <button onClick={() => onOpenStudio(photos)}>
+                                        Decorate in Creative Studio!
+                                    </button>
+                                )}
 
                                 <button className="retake-button"
                                     onClick={resetSession}
