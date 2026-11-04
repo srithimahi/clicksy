@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import type { PointerEvent } from "react";
+import type { CSSProperties, PointerEvent } from "react";
 import { themes } from "./themes";
 import { stickers, stickersByTheme } from "./stickers/index";
 import {exportStrip} from "./exportStrip";
 import { useHistory } from "./hooks/useHistory";
-import strawberryGingham from "./assets/strawberry-gingham.svg";
 
 const PHOTO_FILTERS = {
     none: "none",
@@ -27,11 +26,52 @@ type PlacedSticker = {
         rotation: number;
 };
 
+function getBackgroundStyle(background: {
+    color: string;
+    pattern: "solid" | "gingham";
+    stripeColor?: string;
+    overlapColor?: string;
+}): CSSProperties {
+    if(background.pattern === "solid") {
+        return {
+            backgroundColor: background.color,
+            backgroundImage: "none",
+        };
+    }
+
+    const stripe = background.stripeColor ?? background.color;
+    const overlap = background.overlapColor ?? stripe;
+
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg"
+             width="32" height="32" viewBox="0 0 32 32">
+            <rect width="32" height="32" fill="${background.color}"/>
+            <rect width="16" height="32" fill="${stripe}"/>
+            <rect width="32" height="16" fill="${stripe}"/>
+            <rect width="16" height="16" fill="${overlap}"/>
+        </svg>
+    `;
+
+    return {
+        backgroundColor: background.color,
+        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")`,
+        backgroundRepeat: "repeat",
+        backgroundSize: "32px 32px",
+    };
+}
+
 export default function CreativeStudio({
     onBack,
     photos,
 }: CreativeStudioProps) {
     const [selectedTheme, setSelectedTheme] = useState(themes[0]);
+    const [selectedBackgroundId, setSelectedBackgroundId] = useState(
+        themes[0].backgrounds[0].id
+    );
+
+    const selectedBackground = selectedTheme.backgrounds.find(
+        (background) => background.id === selectedBackgroundId 
+    ) ?? selectedTheme.backgrounds[0];
     const [filterEnabled, setFilterEnabled] = useState(true);
     const activeFilter = filterEnabled ? selectedTheme.filter : "none";
     const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
@@ -291,23 +331,9 @@ export default function CreativeStudio({
                 <div className={`studio-preview ${
                     filterEnabled ? "studio-preview-warm" : ""
                 }`}>
-                    <div className={`studio-strip ${
-                        selectedTheme.framePattern === "gingham" &&
-                        selectedTheme.id !== "strawberry-milk"
-                            ? "studio-strip-gingham"
-                            : ""
-                    }`}
+                    <div className="studio-strip"
                     style={{
-                        backgroundColor: selectedTheme.backgroundColor,
-                        backgroundImage: selectedTheme.id === "strawberry-milk"
-                            ? `url("${strawberryGingham}")`
-                            : undefined,
-
-                        backgroundRepeat: "repeat",
-                        backgroundSize: selectedTheme.id === "strawberry-milk"
-                            ? "32px 32px"
-                            : undefined,
-    
+                        ...getBackgroundStyle(selectedBackground),
                         borderColor: selectedTheme.accentColor,
                     }}
                     ref={stripRef}
@@ -492,9 +518,10 @@ export default function CreativeStudio({
                                     : ""
                                 }`}
 
-                                onClick={() => 
-                                    setSelectedTheme(theme)
-                                }
+                                onClick={() => {
+                                    setSelectedTheme(theme);
+                                    setSelectedBackgroundId(theme.backgrounds[0].id);
+                                }}
                             >
                                 <span className="studio-theme-swatch"
                                     style={{
@@ -513,6 +540,34 @@ export default function CreativeStudio({
                                 </span>
                             </button>
                         ))}
+                    </div>
+
+                    <div className="studio-background-panel">
+                        <span className="studio-panel-label">
+                            backgrounds
+                        </span>
+
+                        <h2>pick your backdrop</h2>
+
+                        <div className="studio-background-list">
+                            {selectedTheme.backgrounds.map((background) => (
+                                <button key={background.id}
+                                    type="button"
+                                    className={`studio-background-option ${
+                                        selectedBackground.id === background.id ? "selected" : ""
+                                    }`}
+                                    onClick={() => setSelectedBackgroundId(background.id)}
+                                >
+                                    <span className="studio-background-swatch"
+                                        style={getBackgroundStyle(background)}
+                                    />
+
+                                    <span className="studio-background-name">
+                                        {background.name}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="studio-theme-details">

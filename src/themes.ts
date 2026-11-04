@@ -1,3 +1,12 @@
+export type ThemeBackground = {
+    id: string;
+    name: string;
+    color: string;
+    pattern: "solid" | "gingham";
+    stripeColor?: string;
+    overlapColor?: string;
+}
+
 export type Theme = {
     id: string;
     name: string;
@@ -10,6 +19,7 @@ export type Theme = {
     filter: "none" | "warm" | "dreamy" | "vintage";
 
     stickers: string[];
+    backgrounds: ThemeBackground[];
 };
 
 //FIRST THEME: LITTLE BAKERY
@@ -33,6 +43,52 @@ export const littleBakery: Theme = {
         "jam",
         "cookies",
     ],
+
+    backgrounds: [
+        {
+            id: "vanilla-latte",
+            name: "Vanilla Latte",
+            color: "fff0d8",
+            pattern: "solid",
+        },
+        {
+            id: "rose-frosting",
+            name: "Rose Frosting",
+            color: "#f5d3d0",
+            pattern: "gingham",
+            stripeColor: "#e9b8bD",
+            overlapColor: "#dba0a9",
+        },
+        {
+            id: "peach-custard",
+            name: "Peach Custard",
+            color: "#ffd6c5",
+            pattern: "solid",
+        },
+        {
+            id: "milky-caramel",
+            name: "Milky Caramel",
+            color: "#e9d8cb",
+            pattern: "solid",
+        },
+        {
+            id: "sugar-glaze",
+            name: "Sugar Glaze",
+            color: "#fff5e8",
+            pattern: "gingham",
+            stripeColor: "#eaddd0",
+            overlapColor: "#dfccba",
+
+        },
+        {
+            id: "iced-macchiato",
+            name: "Iced Maccchiato",
+            color: "#fff0d8",
+            pattern: "gingham",
+            stripeColor: "#e9c9a7",
+            overlapColor: "#d8ad84",
+        },
+    ],
 };
 
 //SECOND THEME: STRAWBERRY MILK
@@ -51,6 +107,17 @@ export const strawberryMilk: Theme = {
     stickers: [
         "strawberry-milk-cartons",
         "strawberry-sparkles",
+    ],
+
+    backgrounds: [
+        {
+            id: "strawberry-milk",
+            name: "Strawberry Milk",
+            color: "#fff2f5",
+            pattern: "gingham",
+            stripeColor: "#f8c7d4",
+            overlapColor: "#efa8bc",
+        },
     ],
 };
 
