@@ -3,6 +3,7 @@ import type { PointerEvent } from "react";
 import { themes } from "./themes";
 import { stickers, stickersByTheme } from "./stickers/index";
 import {exportStrip} from "./exportStrip";
+import { useHistory } from "./hooks/useHistory";
 import strawberryGingham from "./assets/strawberry-gingham.svg";
 
 const PHOTO_FILTERS = {
@@ -34,10 +35,15 @@ export default function CreativeStudio({
     const [filterEnabled, setFilterEnabled] = useState(true);
     const activeFilter = filterEnabled ? selectedTheme.filter : "none";
     const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
+    const stickerHistory = useHistory<PlacedSticker[]>([]);
+    useEffect(() => {
+        setPlacedStickers(stickerHistory.current);
+        setSelectedStickerId(null);
+    }, [stickerHistory.current]);
     const [selectedStickerId, setSelectedStickerId] = useState<number | null>(null);
-    
     const stripRef = useRef<HTMLDivElement>(null);
     const draggingStickerId = useRef<number | null>(null);
+    const gestureStart = useRef<PlacedSticker[] | null>(null);
 
     const editingHandle = useRef<{
         id: number;
@@ -49,6 +55,24 @@ export default function CreativeStudio({
         startAngle: number;
         startRotation: number;
     } | null>(null);
+
+    function commitStickerChange(nextStickers: PlacedSticker[]) {
+        setPlacedStickers(nextStickers);
+        stickerHistory.push(nextStickers);
+    }
+
+    function finishStickerGesture() {
+        const before = gestureStart.current;
+        gestureStart.current = null;
+
+        if(!before) return;
+
+        const changed = JSON.stringify(before) !== JSON.stringify(placedStickers);
+
+        if(changed) {
+            stickerHistory.push(placedStickers);
+        }
+    }
 
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
@@ -76,12 +100,11 @@ export default function CreativeStudio({
 
             event.preventDefault();
 
-            setPlacedStickers((previous) => 
-                previous.filter(
-                    (sticker) => sticker.id !== selectedStickerId
-                )
+            const nextStickers = placedStickers.filter(
+                (sticker) => sticker.id !== selectedStickerId
             );
 
+            commitStickerChange(nextStickers);
             setSelectedStickerId(null);
         }
 
@@ -90,7 +113,7 @@ export default function CreativeStudio({
         return() => {
             window.removeEventListener("keydown", handleKeyDown);
         };
-    }, [selectedStickerId]);
+    }, [selectedStickerId, placedStickers, stickerHistory.push]);
 
     function addSticker(assetId: string) {
         const newSticker: PlacedSticker = {
@@ -98,22 +121,24 @@ export default function CreativeStudio({
             assetId,
             x: 50,
             y: 50,
-            size: 55,
+            size: 35,
             rotation: 0,
         };
 
-        setPlacedStickers((previous) => [...previous, newSticker]);
+        const nextStickers = [...placedStickers, newSticker];
+
+        commitStickerChange(nextStickers);
         setSelectedStickerId(newSticker.id);
     }
 
     function resizeSticker(id: number, newSize: number) {
+        const size = Math.max(10, Math.min(100, newSize));
+
         setPlacedStickers((previous) =>
             previous.map((sticker) => 
-                sticker.id === id
-                    ? { ...sticker, size: newSize }
-                    : sticker
+                sticker.id === id ? { ...sticker, size } : sticker
             )
-        );
+        )
     }
 
     function rotateSticker(id: number, newRotation: number) {
@@ -167,6 +192,9 @@ export default function CreativeStudio({
     ) {
         event.preventDefault();
         event.stopPropagation();
+        event.currentTarget.blur();
+
+        gestureStart.current = placedStickers;
 
         const strip = stripRef.current;
         if(!strip) return;
@@ -203,8 +231,8 @@ export default function CreativeStudio({
         if(edit.mode === "resize") {
             const distance = Math.hypot(dx, dy);
             const newSize = Math.max(
-                25,
-                Math.min(140, edit.startSize * (distance / edit.startDistance))
+                10,
+                Math.min(100, edit.startSize * (distance / edit.startDistance))
             );
 
             resizeSticker(edit.id, Math.round(newSize));
@@ -258,14 +286,6 @@ export default function CreativeStudio({
 
                 <span className="studio-logo">clicksy</span>
             </header>
-
-            <section className="studio-intro">
-                <span className="studio-eyebrow">
-                    Creative Studio
-                </span>
-
-                <h1>a space for making your moment yours</h1>
-            </section>
 
             <section className="studio-workspace">
                 <div className={`studio-preview ${
@@ -347,6 +367,7 @@ export default function CreativeStudio({
                                             event.preventDefault();
                                             event.stopPropagation();
 
+                                            gestureStart.current = placedStickers;
                                             draggingStickerId.current = placed.id;
                                             setSelectedStickerId(placed.id);
                                             event.currentTarget.setPointerCapture(event.pointerId);
@@ -354,11 +375,11 @@ export default function CreativeStudio({
                                         onPointerMove={(event) => {
                                             if(draggingStickerId.current === placed.id) {
                                                 moveSticker(event, placed.id);
-                                                autoScrollWhileDebugging(event.clientY);
                                             }
                                         }}
                                         onPointerUp={(event) => {
                                             draggingStickerId.current = null;
+                                            finishStickerGesture();
 
                                             if(event.currentTarget.hasPointerCapture(event.pointerId)) {
                                                 event.currentTarget.releasePointerCapture(event.pointerId);   
@@ -366,6 +387,7 @@ export default function CreativeStudio({
                                         }}
                                         onPointerCancel={(event) => {
                                             draggingStickerId.current = null;
+                                            finishStickerGesture();
                                         }}
                                     > 
                                         <img className="studio-placed-sticker"
@@ -396,6 +418,7 @@ export default function CreativeStudio({
                                                         onPointerMove={moveHandle}
                                                         onPointerUp={(event) => {
                                                             editingHandle.current = null;
+                                                            finishStickerGesture();
                                                             if(event.currentTarget.hasPointerCapture(event.pointerId)) {
                                                                 event.currentTarget.releasePointerCapture(event.pointerId);
                                                             }
@@ -411,12 +434,14 @@ export default function CreativeStudio({
                                                         onPointerMove={moveHandle}
                                                         onPointerUp={(event) => {
                                                             editingHandle.current = null;
+                                                            finishStickerGesture();
                                                             if(event.currentTarget.hasPointerCapture(event.pointerId)) {
                                                                 event.currentTarget.releasePointerCapture(event.pointerId);
                                                             }
                                                         }}
                                                         onPointerCancel={() => {
                                                             editingHandle.current = null;
+                                                            finishStickerGesture();
                                                         }}
                                                     >
                                                       ↻ 
@@ -439,6 +464,13 @@ export default function CreativeStudio({
                 </div>
 
                 <aside className="studio-sidebar">
+                    <section className="studio-intro">
+                        <span className="studio-eyebrow">
+                            Creative Studio
+                        </span>
+
+                        <h1>a space to make your moment yours!</h1>
+                    </section>
                     <div className="studio-panel-heading">
                         <span className="studio-panel-label">
                             Your theme
@@ -553,8 +585,8 @@ export default function CreativeStudio({
 
                                 <input id="sticker-size"
                                     type="range"
-                                    min="25"
-                                    max="140"
+                                    min="10"
+                                    max="100"
                                     value={
                                         placedStickers.find(
                                             (sticker) => sticker.id === selectedStickerId
@@ -613,9 +645,11 @@ export default function CreativeStudio({
                             <button type="button"
                                 className="studio-remove-sticker"
                                 onClick={() => {
-                                    setPlacedStickers((previous) =>
-                                        previous.filter((sticker) => sticker.id !== selectedStickerId)
+                                    const nextStickers = placedStickers.filter(
+                                        (sticker) => sticker.id !== selectedStickerId
                                     );
+
+                                    commitStickerChange(nextStickers);
                                     setSelectedStickerId(null);
                                 }}
                             >
@@ -623,14 +657,32 @@ export default function CreativeStudio({
                             </button>
                         )}
                     </div>
+
+                    <div className="studio-history-controls">
+                        <button
+                            type="button"
+                            onClick={stickerHistory.undo}
+                            disabled={!stickerHistory.canUndo}
+                        >
+                            ↶ Undo
+                        </button>
+
+                        <button 
+                            type="button"
+                            onClick={stickerHistory.redo}
+                            disabled={!stickerHistory.canRedo}
+                        >
+                            ↷ Redo
+                        </button>
+                    </div>
+                    <button type="button"
+                        className="studio-download-button"
+                        onClick={downloadCreation}
+                    > 
+                        Download your creation!
+                    </button>
                 </aside>
             </section>
-            <button type="button"
-                    className="studio-download-button"
-                    onClick={downloadCreation}
-                > 
-                    Download your creation!
-                </button>
         </main>
     )
 }
