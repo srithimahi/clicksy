@@ -91,7 +91,7 @@ export async function exportStrip({
         const photoStyle = getComputedStyle(photo);
 
         ctx.save();
-        ctx.filter = photoStyle.filter;
+        ctx.filter = photoStyle.filter === "none" ? "none" : photoStyle.filter;
 
         const x = rect.left - bounds.left;
         const y = rect.top - bounds.top;

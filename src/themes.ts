@@ -107,16 +107,56 @@ export const strawberryMilk: Theme = {
     stickers: [
         "strawberry-milk-cartons",
         "strawberry-sparkles",
+        "strawberry",
+        "satin-bow",
+        "strawberry-shortcake",
+        "strawberry-bear",
+        "strawberry-milk-bottle",
+        "love-letter",
     ],
 
     backgrounds: [
         {
-            id: "strawberry-milk",
-            name: "Strawberry Milk",
+            id: "strawberry-cream",
+            name: "Strawberry Cream",
+            color: "#ffe4eb",
+            pattern: "solid",
+        },
+        {
+            id: "pink-cloud",
+            name: "Pink Cloud",
+            color: "#f8d9e8",
+            pattern: "solid",
+        },
+        {
+            id: "milk-foam",
+            name: "Milk Foam",
+            color: "#fff5f8",
+            pattern: "solid",
+        },
+        {
+            id: "classic-strawberry",
+            name: "Classic Strawberry",
             color: "#fff2f5",
             pattern: "gingham",
             stripeColor: "#f8c7d4",
             overlapColor: "#efa8bc",
+        },
+        {
+            id: "berry-blush",
+            name: "Berry Blush",
+            color: "#fbe1e9",
+            pattern: "gingham",
+            stripeColor: "#f3b9cc",
+            overlapColor: "#eca2bb",
+        },
+        {
+            id: "ribbon-pink",
+            name: "Ribbon Pink",
+            color: "#fcecf2",
+            pattern: "gingham",
+            stripeColor: "#ebcad9",
+            overlapColor: "#deb3c8",
         },
     ],
 };

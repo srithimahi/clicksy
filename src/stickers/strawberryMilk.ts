@@ -9,7 +9,7 @@ export const strawberryMilkStickers = [
             <rect width="18" height="18" fill="#FFE4EB"/>
             <rect width="9" height="9" fill="#F5A8BB" opacity=".55"/>
             <rect x="9" y="9" width="9" height="9" fill="#F5A8BB" opacity=".55"/>
-            </pattern>
+            </pattern> 
 
             <linearGradient id="milkFront" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stop-color="#FFF4F4"/>
@@ -310,4 +310,394 @@ export const strawberryMilkStickers = [
         `,
         },
 
+        {
+                id: "strawberry",
+                name: "Strawberry",
+                svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 180">
+                <defs>
+                        <linearGradient id="berryFill" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="#FFB1C3"/>
+                        <stop offset="1" stop-color="#F16D88"/>
+                        </linearGradient>
+                </defs>
+
+                <!-- Strawberry body -->
+                <path d="M80 47
+                        C54 27 25 46 28 78
+                        C31 116 62 149 80 157
+                        C98 149 129 116 132 78
+                        C135 46 106 27 80 47Z"
+                        fill="url(#berryFill)"
+                        stroke="#D85C7D"
+                        stroke-width="4"
+                        stroke-linejoin="round"/>
+
+                <!-- Leaves -->
+                <path d="M80 49
+                        Q65 29 45 42
+                        Q52 49 64 52
+                        Q57 58 58 66
+                        Q72 63 80 55
+                        Q89 63 102 66
+                        Q103 58 96 52
+                        Q108 49 115 42
+                        Q95 29 80 49Z"
+                        fill="#8CB69A"
+                        stroke="#668F76"
+                        stroke-width="3"
+                        stroke-linejoin="round"/>
+
+                <!-- Seeds -->
+                <g fill="#FFF1D9">
+                        <ellipse cx="57" cy="78" rx="2.5" ry="4"/>
+                        <ellipse cx="83" cy="75" rx="2.5" ry="4"/>
+                        <ellipse cx="107" cy="82" rx="2.5" ry="4"/>
+                        <ellipse cx="47" cy="101" rx="2.5" ry="4"/>
+                        <ellipse cx="70" cy="103" rx="2.5" ry="4"/>
+                        <ellipse cx="96" cy="106" rx="2.5" ry="4"/>
+                        <ellipse cx="81" cy="132" rx="2.5" ry="4"/>
+                </g>
+
+                <!-- Soft highlight -->
+                <path d="M46 65 Q38 82 45 93"
+                        fill="none"
+                        stroke="#FFDCE5"
+                        stroke-width="5"
+                        stroke-linecap="round"/>
+                </svg>
+        `,
+        },
+
+        {
+                id: "satin-bow",
+                name: "Satin Bow",
+                svg: `
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 170">
+                        <defs>
+                                <linearGradient id="bowFill" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0" stop-color="#FFDCE5"/>
+                                <stop offset="1" stop-color="#F3A0B7"/>
+                                </linearGradient>
+                        </defs>
+
+                        <!-- Left loop -->
+                        <path d="M95 75
+                                C72 47 29 30 20 53
+                                C11 78 40 105 91 91Z"
+                                fill="url(#bowFill)"
+                                stroke="#D85C7D"
+                                stroke-width="4"
+                                stroke-linejoin="round"/>
+
+                        <!-- Right loop -->
+                        <path d="M105 75
+                                C128 47 171 30 180 53
+                                C189 78 160 105 109 91Z"
+                                fill="url(#bowFill)"
+                                stroke="#D85C7D"
+                                stroke-width="4"
+                                stroke-linejoin="round"/>
+
+                        <!-- Ribbon tails -->
+                        <path d="M91 91
+                                Q74 112 52 148
+                                L77 140 L91 158
+                                Q106 127 103 96Z"
+                                fill="#F5A8BB"
+                                stroke="#D85C7D"
+                                stroke-width="4"
+                                stroke-linejoin="round"/>
+
+                        <path d="M109 91
+                                Q126 112 148 148
+                                L123 140 L109 158
+                                Q94 127 97 96Z"
+                                fill="#F5A8BB"
+                                stroke="#D85C7D"
+                                stroke-width="4"
+                                stroke-linejoin="round"/>
+
+                        <!-- Fold details -->
+                        <g fill="none" stroke="#E789A4"
+                                stroke-width="3" stroke-linecap="round">
+                                <path d="M85 77 Q60 58 35 60"/>
+                                <path d="M115 77 Q140 58 165 60"/>
+                                <path d="M83 111 L73 138"/>
+                                <path d="M117 111 L127 138"/>
+                        </g>
+
+                        <!-- Center knot -->
+                        <rect x="88" y="69" width="24" height="29" rx="10"
+                                fill="#FFDCE5"
+                                stroke="#D85C7D"
+                                stroke-width="4"/>
+                        </svg>
+                `,
+        },
+
+        {
+                id: "strawberry-shortcake",
+                name: "Strawberry Shortcake",
+                svg: `
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 190">
+                        <!-- Cake slice -->
+                        <path d="M28 89 L166 89 L178 159
+                                Q178 167 168 167 L35 167
+                                Q25 167 25 157Z"
+                                fill="#FFF1DC"
+                                stroke="#D85C7D"
+                                stroke-width="4"
+                                stroke-linejoin="round"/>
+
+                        <!-- Strawberry filling -->
+                        <path d="M27 126 L173 126 L176 142 L26 142Z"
+                                fill="#F5A8BB"/>
+
+                        <!-- Cake layers -->
+                        <path d="M28 119 L172 119 M27 145 L176 145"
+                                fill="none"
+                                stroke="#E9C9A7"
+                                stroke-width="3"/>
+
+                        <!-- Whipped cream -->
+                        <path d="M26 90
+                                Q18 78 35 72
+                                Q33 57 52 59
+                                Q60 42 79 54
+                                Q96 39 112 55
+                                Q131 45 143 62
+                                Q166 57 171 76
+                                Q186 84 173 94
+                                Q159 102 145 92
+                                Q127 103 112 92
+                                Q94 104 79 92
+                                Q59 103 45 91
+                                Q34 99 26 90Z"
+                                fill="#FFF8F6"
+                                stroke="#E789A4"
+                                stroke-width="3"
+                                stroke-linejoin="round"/>
+
+                        <!-- Top strawberry -->
+                        <path d="M101 44
+                                C87 33 72 45 78 61
+                                Q89 81 101 86
+                                Q114 80 124 61
+                                C130 45 115 33 101 44Z"
+                                fill="#F16D88"
+                                stroke="#D85C7D"
+                                stroke-width="3"/>
+
+                        <path d="M101 45 Q89 31 78 41
+                                L93 49 L101 44
+                                L109 49 L124 41
+                                Q112 31 101 45Z"
+                                fill="#8CB69A"
+                                stroke="#668F76"
+                                stroke-width="2.5"/>
+
+                        <g fill="#FFF1D9">
+                                <ellipse cx="93" cy="55" rx="2" ry="3"/>
+                                <ellipse cx="110" cy="56" rx="2" ry="3"/>
+                                <ellipse cx="101" cy="68" rx="2" ry="3"/>
+                        </g>
+                        </svg>
+                `,
+        },
+
+        {
+                id: "strawberry-bear",
+                name: "Strawberry Bear",
+                svg: `
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220">
+                        <!-- Ears -->
+                        <circle cx="52" cy="54" r="27"
+                                fill="#FFF0E5" stroke="#D98B91" stroke-width="4"/>
+                        <circle cx="148" cy="54" r="27"
+                                fill="#FFF0E5" stroke="#D98B91" stroke-width="4"/>
+
+                        <circle cx="52" cy="54" r="13" fill="#F8C5CE"/>
+                        <circle cx="148" cy="54" r="13" fill="#F8C5CE"/>
+
+                        <!-- Body -->
+                        <ellipse cx="100" cy="153" rx="59" ry="55"
+                                fill="#FFF0E5"
+                                stroke="#D98B91"
+                                stroke-width="4"/>
+
+                        <!-- Feet -->
+                        <ellipse cx="60" cy="190" rx="27" ry="21"
+                                fill="#FFF0E5" stroke="#D98B91" stroke-width="4"/>
+                        <ellipse cx="140" cy="190" rx="27" ry="21"
+                                fill="#FFF0E5" stroke="#D98B91" stroke-width="4"/>
+
+                        <ellipse cx="60" cy="192" rx="12" ry="10" fill="#F8C5CE"/>
+                        <ellipse cx="140" cy="192" rx="12" ry="10" fill="#F8C5CE"/>
+
+                        <!-- Head -->
+                        <ellipse cx="100" cy="88" rx="66" ry="58"
+                                fill="#FFF0E5"
+                                stroke="#D98B91"
+                                stroke-width="4"/>
+
+                        <!-- Face -->
+                        <g fill="#A96870">
+                                <circle cx="78" cy="89" r="4"/>
+                                <circle cx="122" cy="89" r="4"/>
+                                <ellipse cx="100" cy="103" rx="6" ry="4"/>
+                        </g>
+
+                        <path d="M100 107 Q94 116 88 110
+                                M100 107 Q106 116 112 110"
+                                fill="none"
+                                stroke="#A96870"
+                                stroke-width="2.5"
+                                stroke-linecap="round"/>
+
+                        <ellipse cx="65" cy="107" rx="10" ry="6"
+                                fill="#F8C5CE" opacity=".75"/>
+                        <ellipse cx="135" cy="107" rx="10" ry="6"
+                                fill="#F8C5CE" opacity=".75"/>
+
+                        <!-- Small bow -->
+                        <path d="M92 136 Q71 120 70 137
+                                Q72 150 94 143Z
+                                M108 136 Q129 120 130 137
+                                Q128 150 106 143Z"
+                                fill="#F5A8BB"
+                                stroke="#D85C7D"
+                                stroke-width="3"/>
+
+                        <ellipse cx="100" cy="140" rx="9" ry="8"
+                                fill="#FFDCE5"
+                                stroke="#D85C7D"
+                                stroke-width="3"/>
+                        </svg>
+                `,
+        },
+
+        {
+                id: "strawberry-milk-bottle",
+                name: "Strawberry Milk Bottle",
+                svg: `
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 220">
+                        <defs>
+                                <linearGradient id="bottleMilk" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0" stop-color="#FFE4EB"/>
+                                <stop offset="1" stop-color="#F5A8BB"/>
+                                </linearGradient>
+                        </defs>
+
+                        <!-- Bottle body -->
+                        <path d="M55 43 L105 43 L105 69
+                                Q105 80 120 91
+                                Q132 101 132 117
+                                L132 189
+                                Q132 203 118 203
+                                L42 203
+                                Q28 203 28 189
+                                L28 117
+                                Q28 101 40 91
+                                Q55 80 55 69Z"
+                                fill="#FFF8F8"
+                                stroke="#D85C7D"
+                                stroke-width="4"
+                                stroke-linejoin="round"/>
+
+                        <!-- Pink milk -->
+                        <path d="M32 119 L128 119 L128 189
+                                Q128 199 118 199 L42 199
+                                Q32 199 32 189Z"
+                                fill="url(#bottleMilk)"/>
+
+                        <!-- Cap -->
+                        <rect x="51" y="24" width="58" height="26" rx="8"
+                                fill="#F5A8BB"
+                                stroke="#D85C7D"
+                                stroke-width="4"/>
+
+                        <path d="M59 32 V43 M71 32 V43 M83 32 V43 M95 32 V43"
+                                stroke="#FFDCE5"
+                                stroke-width="2"
+                                stroke-linecap="round"/>
+
+                        <!-- Label -->
+                        <rect x="47" y="127" width="66" height="55" rx="12"
+                                fill="#FFF4F4"
+                                stroke="#E789A4"
+                                stroke-width="3"/>
+
+                        <!-- Strawberry -->
+                        <path d="M80 143
+                                C69 135 58 145 63 157
+                                Q69 172 80 176
+                                Q91 172 97 157
+                                C102 145 91 135 80 143Z"
+                                fill="#F16D88"
+                                stroke="#D65C7D"
+                                stroke-width="2.5"/>
+
+                        <path d="M80 144 Q72 135 64 141
+                                L74 147 L80 143
+                                L86 147 L96 141
+                                Q88 135 80 144Z"
+                                fill="#8CB69A"
+                                stroke="#668F76"
+                                stroke-width="2"/>
+
+                        <!-- Glass highlight -->
+                        <path d="M42 102 Q37 111 38 125"
+                                fill="none"
+                                stroke="white"
+                                stroke-width="5"
+                                stroke-linecap="round"/>
+                        </svg>
+                `,
+        },
+
+        {
+                id: "love-letter",
+                name: "Love Letter",
+                svg: `
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160">
+                        <!-- Envelope -->
+                        <rect x="17" y="28" width="166" height="112" rx="12"
+                                fill="#FFF0F4"
+                                stroke="#D85C7D"
+                                stroke-width="4"/>
+
+                        <!-- Envelope folds -->
+                        <path d="M18 40 L100 103 L182 40"
+                                fill="none"
+                                stroke="#D85C7D"
+                                stroke-width="3.5"
+                                stroke-linejoin="round"/>
+
+                        <path d="M19 133 L75 88
+                                M181 133 L125 88"
+                                fill="none"
+                                stroke="#E789A4"
+                                stroke-width="3"
+                                stroke-linecap="round"/>
+
+                        <!-- Heart seal -->
+                        <path d="M100 91
+                                C87 74 69 91 81 106
+                                Q89 116 100 123
+                                Q111 116 119 106
+                                C131 91 113 74 100 91Z"
+                                fill="#F5A8BB"
+                                stroke="#D85C7D"
+                                stroke-width="3"
+                                stroke-linejoin="round"/>
+
+                        <!-- Tiny highlight -->
+                        <path d="M89 95 Q91 91 95 93"
+                                fill="none"
+                                stroke="#FFDCE5"
+                                stroke-width="3"
+                                stroke-linecap="round"/>
+                        </svg>
+                `,
+        },
 ];

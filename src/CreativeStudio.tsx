@@ -6,11 +6,34 @@ import {exportStrip} from "./exportStrip";
 import { useHistory } from "./hooks/useHistory";
 
 const PHOTO_FILTERS = {
-    none: "none",
-    warm: "sepia(0.18) saturate(1.15) brightness(1.04)",
-    dreamy: "saturate(0.85) brightness(1.12) contrast(0.92)",
-    vintage: "sepia(0.35) saturate(0.75) contrast(0.92)",
-}
+    original: {
+        name: "Original",
+        description: "natural, unedited",
+        css: "none",
+    },
+    blush: {
+        name: "Blush",
+        description: "a subtle rosy warmth",
+        css: "sepia(0.08) saturate(1.06) brightness(1.03) contrast(0.97)",
+    },
+    soft: {
+        name: "Soft",
+        description: "bright and airy",
+        css: "brightness(1.08) contrast(0.90) saturate(0.94)",
+    },
+    film: {
+        name: "Film",
+        description: "muted, nostalgic",
+        css: "sepia(0.16) saturate(0.78) contrast(0.93)"
+    },
+    mono: {
+        name: "Mono",
+        description: "classic black and white",
+        css: "grayscale(1) contrast(1.06) brightness(1.03)",
+    },
+} as const;
+
+type PhotoFilterId = keyof typeof PHOTO_FILTERS;
 
 type CreativeStudioProps = {
     onBack: () => void;
@@ -25,6 +48,17 @@ type PlacedSticker = {
         size: number;
         rotation: number;
 };
+
+type PlacedText = {
+    id: number;
+    text: string;
+    x: number;
+    y: number;
+    size: number;
+    rotation: number;
+    font: string;
+    color: string;
+}
 
 function getBackgroundStyle(background: {
     color: string;
@@ -65,24 +99,41 @@ export default function CreativeStudio({
     photos,
 }: CreativeStudioProps) {
     const [selectedTheme, setSelectedTheme] = useState(themes[0]);
-    const [selectedBackgroundId, setSelectedBackgroundId] = useState(
-        themes[0].backgrounds[0].id
-    );
+    const [backgroundSelections, setBackgroundSelections] = 
+        useState<Record<string, string>>({});
+
+    const selectedBackgroundId = backgroundSelections[selectedTheme.id] ?? selectedTheme.backgrounds[0]?.id;
 
     const selectedBackground = selectedTheme.backgrounds.find(
         (background) => background.id === selectedBackgroundId 
     ) ?? selectedTheme.backgrounds[0];
-    const [filterEnabled, setFilterEnabled] = useState(true);
-    const activeFilter = filterEnabled ? selectedTheme.filter : "none";
+    const [selectedFilterId, setSelectedFilterId] = useState<PhotoFilterId>("original");
+    const activeFilter = PHOTO_FILTERS[selectedFilterId].css;
     const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
+    const [placedTexts, setPlacedTexts] = useState<PlacedText[]>([]);
+    const [selectedTextId, setSelectedTextId] = useState<number | null>(null);
     const stickerHistory = useHistory<PlacedSticker[]>([]);
     useEffect(() => {
         setPlacedStickers(stickerHistory.current);
-        setSelectedStickerId(null);
     }, [stickerHistory.current]);
     const [selectedStickerId, setSelectedStickerId] = useState<number | null>(null);
+    const selectedStickerIndex = placedStickers.findIndex((sticker) => sticker.id === selectedStickerId);
+    const selectedSticker = placedStickers.find((sticker) => sticker.id === selectedStickerId);
+    const stickerLayers = placedStickers.map((sticker, index) => ({
+        sticker, 
+        index,
+    })).reverse();
     const stripRef = useRef<HTMLDivElement>(null);
+    const controlsLayerRef = useRef<HTMLDivElement>(null);
     const draggingStickerId = useRef<number | null>(null);
+    const textDrag = useRef<{
+        id: number;
+        pointerId: number;
+        startX: number;
+        startY: number;
+        originalX: number;
+        originalY: number;
+    } | null>(null);
     const gestureStart = useRef<PlacedSticker[] | null>(null);
 
     const editingHandle = useRef<{
@@ -101,6 +152,33 @@ export default function CreativeStudio({
         stickerHistory.push(nextStickers);
     }
 
+    function moveStickerLayer(
+        id: number,
+        direction: "forward" | "backward"
+    ) {
+        const currentIndex = placedStickers.findIndex(
+            (sticker) => sticker.id === id
+        );
+
+        if(currentIndex === -1) return;
+
+        const nextIndex = direction === "forward" ? currentIndex + 1 : currentIndex - 1;
+
+        if(nextIndex < 0 || nextIndex >= placedStickers.length) {
+            return;
+        }
+
+        const nextStickers = [...placedStickers];
+
+        [nextStickers[currentIndex], nextStickers[nextIndex]] = [
+            nextStickers[nextIndex],
+            nextStickers[currentIndex],
+        ];
+
+        commitStickerChange(nextStickers);
+        setSelectedStickerId(id);
+    }
+
     function finishStickerGesture() {
         const before = gestureStart.current;
         gestureStart.current = null;
@@ -113,6 +191,51 @@ export default function CreativeStudio({
             stickerHistory.push(placedStickers);
         }
     }
+
+    useEffect(() => {
+        function handleHistoryShortcuts(event: KeyboardEvent) {
+            if(!(event.ctrlKey || event.metaKey)) {
+                return;
+            }
+
+            if(event.key.toLowerCase() !== "z") {
+                return;
+            }
+
+            const target = event.target;
+
+            if(target instanceof HTMLElement && (
+                target.isContentEditable ||
+                ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)
+            )) {
+                return;
+            }
+
+            if(event.altKey) {
+                return;
+            }
+
+            event.preventDefault();
+
+            if(event.shiftKey) {
+                stickerHistory.redo();
+            } else {
+                stickerHistory.undo();
+            }
+        }
+
+        window.addEventListener(
+            "keydown",
+            handleHistoryShortcuts
+        );
+
+        return () => {
+            window.removeEventListener(
+                "keydown",
+                handleHistoryShortcuts
+            );
+        };
+    }, [stickerHistory.undo, stickerHistory.redo]);
 
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
@@ -169,6 +292,23 @@ export default function CreativeStudio({
 
         commitStickerChange(nextStickers);
         setSelectedStickerId(newSticker.id);
+    }
+
+    function addTextSticker() {
+        const newText: PlacedText = {
+            id: Date.now() + Math.random(),
+            text: "your text",
+            x: 50,
+            y: 50,
+            size: 22,
+            rotation: 0,
+            font: "Georgia, serif",
+            color: "#A85070",
+        };
+
+        setPlacedTexts((previous) => [...previous, newText]);
+        setSelectedTextId(newText.id);
+        setSelectedStickerId(null);
     }
 
     function resizeSticker(id: number, newSize: number) {
@@ -288,6 +428,30 @@ export default function CreativeStudio({
         }
     }
 
+    function getStickerControlPosition(sticker: PlacedSticker) {
+        const strip = stripRef.current;
+        const controlsLayer = controlsLayerRef.current;
+
+        if(!strip || !controlsLayer) {
+            return null;
+        }
+
+        const stickerElement = Array.from(strip.querySelectorAll<HTMLElement>(".studio-sticker-wrapper"))
+            .find((element) => element.dataset.stickerId === String(sticker.id));
+
+        if(!stickerElement) {
+            return null;
+        }
+
+        const stickerRect = stickerElement.getBoundingClientRect();
+        const layerRect = controlsLayer.getBoundingClientRect();
+
+        return {
+            x: stickerRect.left + stickerRect.width / 2 - layerRect.left,
+            y: stickerRect.top + stickerRect.height / 2 - layerRect.top,
+        };
+    }
+
     async function downloadCreation() {
         if(!stripRef.current) return;
 
@@ -310,7 +474,7 @@ export default function CreativeStudio({
                 if(
                     target instanceof Element &&
                     !target.closest(
-                        ".studio-sticker-wrapper, .studio-sidebar"
+                        ".studio-sticker-wrapper, .studio-placed-text, .studio-sidebar"
                     )
                 ) {
                     setSelectedStickerId(null);
@@ -328,164 +492,262 @@ export default function CreativeStudio({
             </header>
 
             <section className="studio-workspace">
-                <div className={`studio-preview ${
-                    filterEnabled ? "studio-preview-warm" : ""
-                }`}>
-                    <div className="studio-strip"
-                    style={{
-                        ...getBackgroundStyle(selectedBackground),
-                        borderColor: selectedTheme.accentColor,
-                    }}
-                    ref={stripRef}
-                    onPointerDown={(event) => {
-                        const target = event.target;
+                <div className="studio-preview">
+                    <div className="studio-strip-editor">
+                        <div className="studio-strip"
+                        style={{
+                            ...getBackgroundStyle(selectedBackground),
+                            borderColor: selectedTheme.accentColor,
+                        }}
+                        ref={stripRef}
+                        onPointerDown={(event) => {
+                            const target = event.target;
 
-                        if(
-                            target instanceof Element &&
-                            !target.closest(".studio-sticker-wrapper")
-                        ) {
-                            setSelectedStickerId(null);
-                        }
-                    }}
-                    >
-                        {Array.from({ length: 4 }, (_, index) => (
-                            <div className="studio-photo" key={index}>
-                                {photos[index] ? (
-                                    <img src={photos[index]}
-                                        alt={`Photo ${index+1}`}
-                                        className="studio-photo-image"
-                                        style={{ filter: PHOTO_FILTERS[activeFilter] }}
-                                    />
-                                ) : (
-                                    <span>Photo {index + 1}</span>
-                                )}
-                            </div>
-                        ))}
-
-                        <div className="studio-sticker-layer"
-                            onPointerDown={(event) => {
-                                if(event.target === event.currentTarget) {
-                                    setSelectedStickerId(null);
-                                }
-                            }}
+                            if(
+                                target instanceof Element &&
+                                !target.closest(".studio-sticker-wrapper, .studio-placed-text")
+                            ) {
+                                setSelectedStickerId(null);
+                            }
+                        }}
                         >
-                            {placedStickers.map((placed) => {
-                                const asset = stickers.find(
-                                    (item) => item.id === placed.assetId
-                                );
+                            {Array.from({ length: 4 }, (_, index) => (
+                                <div className="studio-photo" key={index}>
+                                    {photos[index] ? (
+                                        <img src={photos[index]}
+                                            alt={`Photo ${index+1}`}
+                                            className="studio-photo-image"
+                                            style={{ filter: activeFilter }}
+                                        />
+                                    ) : (
+                                        <span>Photo {index + 1}</span>
+                                    )}
+                                </div>
+                            ))}
 
-                                if(!asset) return null;
+                            <div className="studio-sticker-layer"
+                                onPointerDown={(event) => {
+                                    if(event.target === event.currentTarget) {
+                                        setSelectedStickerId(null);
+                                    }
+                                }}
+                            >
+                                {placedStickers.map((placed) => {
+                                    const asset = stickers.find(
+                                        (item) => item.id === placed.assetId
+                                    );
 
-                                const selected = selectedStickerId === placed.id;
+                                    if(!asset) return null;
 
-                                return(
-                                    <div key={placed.id}
-                                        className={`studio-sticker-wrapper ${selected ? "selected" : ""}`}
-                                        style={{
-                                            left: `${placed.x}%`,
-                                            top: `${placed.y}%`,
-                                            width: `${placed.size}px`,
-                                            height: `${placed.size}px`,
-                                            transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
-                                        }}
-                                        onPointerDown={(event) => {
-                                            if(event.target !== event.currentTarget) return;
-                                            event.preventDefault();
-                                            event.stopPropagation();
+                                    const selected = selectedStickerId === placed.id;
 
-                                            gestureStart.current = placedStickers;
-                                            draggingStickerId.current = placed.id;
-                                            setSelectedStickerId(placed.id);
-                                            event.currentTarget.setPointerCapture(event.pointerId);
-                                        }}
-                                        onPointerMove={(event) => {
-                                            if(draggingStickerId.current === placed.id) {
-                                                moveSticker(event, placed.id);
-                                            }
-                                        }}
-                                        onPointerUp={(event) => {
-                                            draggingStickerId.current = null;
-                                            finishStickerGesture();
-
-                                            if(event.currentTarget.hasPointerCapture(event.pointerId)) {
-                                                event.currentTarget.releasePointerCapture(event.pointerId);   
-                                            }   
-                                        }}
-                                        onPointerCancel={(event) => {
-                                            draggingStickerId.current = null;
-                                            finishStickerGesture();
-                                        }}
-                                    > 
-                                        <img className="studio-placed-sticker"
-                                            src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(asset.svg)}`}
-                                            alt={asset.name}
-                                            draggable={false}
+                                    return(
+                                        <div key={placed.id}
+                                            className={`studio-sticker-wrapper ${selected ? "selected" : ""}`}
+                                            data-sticker-id={placed.id}
+                                            style={{
+                                                left: `${placed.x}%`,
+                                                top: `${placed.y}%`,
+                                                width: `${placed.size}px`,
+                                                height: `${placed.size}px`,
+                                                transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
+                                            }}
                                             onPointerDown={(event) => {
+                                                if(event.target !== event.currentTarget) return;
                                                 event.preventDefault();
                                                 event.stopPropagation();
 
+                                                gestureStart.current = placedStickers;
                                                 draggingStickerId.current = placed.id;
                                                 setSelectedStickerId(placed.id);
-
-                                                event.currentTarget.parentElement?.setPointerCapture(
-                                                    event.pointerId
-                                                )
+                                                event.currentTarget.setPointerCapture(event.pointerId);
                                             }}
-                                            />
+                                            onPointerMove={(event) => {
+                                                if(draggingStickerId.current === placed.id) {
+                                                    moveSticker(event, placed.id);
+                                                }
+                                            }}
+                                            onPointerUp={(event) => {
+                                                draggingStickerId.current = null;
+                                                finishStickerGesture();
 
-                                            {selected && (
-                                                <>
-                                                    <button type="button"
-                                                        className="studio-resize-handle"
-                                                        aria-label="Resize sticker"
-                                                        onPointerDown={(event) => 
-                                                            startHandleDrag(event, placed, "resize")
+                                                if(event.currentTarget.hasPointerCapture(event.pointerId)) {
+                                                    event.currentTarget.releasePointerCapture(event.pointerId);   
+                                                }   
+                                            }}
+                                            onPointerCancel={(event) => {
+                                                draggingStickerId.current = null;
+                                                finishStickerGesture();
+                                            }}
+                                        > 
+                                            <img className="studio-placed-sticker"
+                                                src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(asset.svg)}`}
+                                                alt={asset.name}
+                                                draggable={false}
+                                                onPointerDown={(event) => {
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+
+                                                    draggingStickerId.current = placed.id;
+                                                    setSelectedStickerId(placed.id);
+
+                                                    event.currentTarget.parentElement?.setPointerCapture(
+                                                        event.pointerId
+                                                    )
+                                                }}
+                                                />
+                                        </div>
+                                    );
+                                })}
+
+                                {placedTexts.map((placed) => (
+                                    <div key={placed.id}
+                                        className={"studio-placed-text" + (selectedTextId === placed.id ? " selected" : "")}
+                                        style={{
+                                            left: `${placed.x}%`,
+                                            top: `${placed.y}%`,
+                                            fontSize: `${placed.size}px`,
+                                            fontFamily: placed.font,
+                                            color: placed.color,
+                                            transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
+                                        }}
+                                        onPointerDown={(event) => {
+                                            event.preventDefault();
+                                            event.stopPropagation();
+
+                                            setSelectedTextId(placed.id);
+                                            setSelectedStickerId(null);
+
+                                            textDrag.current={
+                                                id: placed.id,
+                                                pointerId: event.pointerId,
+                                                startX: event.clientX,
+                                                startY: event.clientY,
+                                                originalX: placed.x,
+                                                originalY: placed.y,
+                                            };
+                                            event.currentTarget.setPointerCapture(event.pointerId);
+                                        }}
+                                        onPointerMove={(event) => {
+                                            const drag = textDrag.current;
+                                            if (!drag || drag.id !== placed.id ||drag.pointerId !== event.pointerId) {
+                                                return;
+                                            }
+
+                                            const strip = stripRef.current;
+                                            if (!strip) return;
+
+                                            const bounds = strip.getBoundingClientRect();
+
+                                            const deltaX = ((event.clientX - drag.startX) / bounds.width) * 100;
+
+                                            const deltaY = ((event.clientY - drag.startY) / bounds.height) * 100;
+
+                                            const newX = Math.max(
+                                                0,
+                                                Math.min(100, drag.originalX + deltaX)
+                                            );
+
+                                            const newY = Math.max(
+                                                0,
+                                                Math.min(100, drag.originalY + deltaY)
+                                            );
+
+                                            setPlacedTexts((previous) =>
+                                                previous.map((item) =>
+                                                    item.id === placed.id
+                                                        ? {
+                                                            ...item,
+                                                            x: newX,
+                                                            y: newY,
                                                         }
-                                                        onPointerMove={moveHandle}
-                                                        onPointerUp={(event) => {
-                                                            editingHandle.current = null;
-                                                            finishStickerGesture();
-                                                            if(event.currentTarget.hasPointerCapture(event.pointerId)) {
-                                                                event.currentTarget.releasePointerCapture(event.pointerId);
-                                                            }
-                                                        }}
-                                                    />
+                                                        : item
+                                                )
+                                            );
+                                        }}
+                                        onPointerUp={(event) => {
+                                            if(textDrag.current?.pointerId === event.pointerId) {
+                                                textDrag.current = null;
+                                            }
 
-                                                    <button type="button"
-                                                        className="studio-rotate-handle"
-                                                        aria-label="Rotate sticker"
-                                                        onPointerDown={(event) => {
-                                                            startHandleDrag(event, placed, "rotate")
-                                                        }}
-                                                        onPointerMove={moveHandle}
-                                                        onPointerUp={(event) => {
-                                                            editingHandle.current = null;
-                                                            finishStickerGesture();
-                                                            if(event.currentTarget.hasPointerCapture(event.pointerId)) {
-                                                                event.currentTarget.releasePointerCapture(event.pointerId);
-                                                            }
-                                                        }}
-                                                        onPointerCancel={() => {
-                                                            editingHandle.current = null;
-                                                            finishStickerGesture();
-                                                        }}
-                                                    >
-                                                      ↻ 
-                                                    </button>
-                                                </>
-                                            )}
+                                            if(event.currentTarget.hasPointerCapture(event.pointerId)) {
+                                                event.currentTarget.releasePointerCapture(event.pointerId);
+                                            }
+                                        }}
+                                        onPointerCancel={(event) => {
+                                            if(textDrag.current?.pointerId === event.pointerId) {
+                                                textDrag.current = null;
+                                            }
+
+                                            if(event.currentTarget.hasPointerCapture(event.pointerId)) {
+                                                event.currentTarget.releasePointerCapture(event.pointerId);
+                                            }
+                                        }}
+                                    >
+                                        {placed.text}
                                     </div>
-                                );
-                            })}
+                                ))}
+                            </div>
+
+                            <div className="studio-strip-brand"
+                                style={{
+                                    color: selectedTheme.textColor,
+                                }}
+                            >
+                                clicksy
+                            </div>
                         </div>
 
-                        <div className="studio-strip-brand"
-                            style={{
-                                color: selectedTheme.textColor,
-                            }}
-                        >
-                            clicksy
-                        </div>
+                        {selectedSticker && (
+                            <div className="studio-edit-controls-layer"
+                                ref={controlsLayerRef}
+                            >
+                                <div className="studio-edit-controls-wrapper"
+                                    style={{
+                                        left: `${selectedSticker.x}%`,
+                                        top: `${selectedSticker.y}%`,
+                                        width: `${selectedSticker.size}px`,
+                                        height: `${selectedSticker.size}px`,
+                                        transform: `translate(-50%, -50%) rotate(${selectedSticker.rotation}deg)`,
+                                    }}
+                                >
+                                    <button type="button"
+                                        className="studio-resize-handle"
+                                        aria-label="Resize sticker"
+                                        onPointerDown={(event) =>
+                                            startHandleDrag(event, selectedSticker, "resize")
+                                        }
+                                        onPointerMove={moveHandle}
+                                        onPointerUp={(event) => {
+                                            editingHandle.current = null;
+                                            finishStickerGesture();
+                                            if(event.currentTarget.hasPointerCapture(event.pointerId)) {
+                                                event.currentTarget.releasePointerCapture(event.pointerId);
+                                            }
+                                        }}
+                                    />
+
+                                    <button type="button"
+                                        className="studio-rotate-handle"
+                                        aria-label="Rotate sticker"
+                                        onPointerDown={(event) =>
+                                            startHandleDrag(event, selectedSticker, "rotate")
+                                        }
+                                        onPointerMove={moveHandle}
+                                        onPointerUp={(event) => {
+                                            editingHandle.current = null;
+                                            finishStickerGesture();
+
+                                            if(event.currentTarget.hasPointerCapture(event.pointerId)) {
+                                                event.currentTarget.releasePointerCapture(event.pointerId);
+                                            }
+                                        }}
+                                    >
+                                        ↻
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -520,7 +782,6 @@ export default function CreativeStudio({
 
                                 onClick={() => {
                                     setSelectedTheme(theme);
-                                    setSelectedBackgroundId(theme.backgrounds[0].id);
                                 }}
                             >
                                 <span className="studio-theme-swatch"
@@ -556,7 +817,12 @@ export default function CreativeStudio({
                                     className={`studio-background-option ${
                                         selectedBackground.id === background.id ? "selected" : ""
                                     }`}
-                                    onClick={() => setSelectedBackgroundId(background.id)}
+                                    onClick={() => {
+                                        setBackgroundSelections((previous) => ({
+                                            ...previous,
+                                            [selectedTheme.id]: background.id,
+                                        }));
+                                    }}
                                 >
                                     <span className="studio-background-swatch"
                                         style={getBackgroundStyle(background)}
@@ -586,20 +852,50 @@ export default function CreativeStudio({
                         <p>
                             {selectedTheme.stickers.length} stickers in this collection
                         </p>
+                    </div>
 
-                        <div className="studio-filter-control">
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    checked={filterEnabled}
-                                    onChange={(event) =>
-                                        setFilterEnabled(event.target.checked)
-                                    }
-                                />
-                                {selectedTheme.filter === "none"
-                                    ? "original photos"
-                                    : `${selectedTheme.filter} filter`}
-                            </label>
+                    <div className="studio-filters-panel">
+                        <span className="studio-panel-label">
+                            photo filters
+                        </span>
+
+                        <h2>find your mood!</h2>
+                        
+                        <div className="studio-filter-grid">
+                            {(
+                                Object.entries(PHOTO_FILTERS) as [
+                                    PhotoFilterId,
+                                    (typeof PHOTO_FILTERS)[PhotoFilterId]
+                                ][]
+                            ).map(([id, filter]) => (
+                                <button key={id}
+                                    type="button"
+                                    className={`studio-filter-option ${
+                                        selectedFilterId === id ? "selected" : ""
+                                    }`}
+                                    onClick={() => setSelectedFilterId(id)}
+                                    aria-pressed={selectedFilterId === id}
+                                >
+                                    <div className="studio-filter-thumbnail">
+                                        {photos[0] ? (
+                                            <img src={photos[0]}
+                                                alt=""
+                                                style={{ filter: filter.css }}
+                                            />    
+                                        ) : (
+                                            <span>{filter.name}</span>
+                                        )}
+                                    </div>
+
+                                    <span className="studio-filter-name">
+                                        {filter.name}
+                                    </span>
+
+                                    <span className="studio-filter-description">
+                                        {filter.description}
+                                    </span>
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -630,6 +926,21 @@ export default function CreativeStudio({
                                     </span>
                                 </button>
                             ))}
+
+                            <button type="button"
+                                className="studio-sticker-item studio-text-sticker-item"
+                                onClick={addTextSticker}
+                            >
+                                <span className="studio-text-sticker-icon">
+                                    Aa
+                                </span>
+
+                                <span>Text</span>
+
+                                <span className="studio-sticker-count">
+                                    {placedTexts.length} on strip
+                                </span>
+                            </button>
                         </div>
 
                         {selectedStickerId !== null && (
@@ -696,6 +1007,91 @@ export default function CreativeStudio({
                             </div>
                         )}
 
+                        {placedStickers.length > 0 && (
+                            <div className="studio-layer-panel"> 
+                                <div className="studio-layer-heading"> 
+                                    <span className="studio-panel-label">
+                                        sticker layers
+                                    </span>
+
+                                    <span className="studio-layers-count">
+                                        {placedStickers.length} stickers
+                                    </span>
+                                </div>
+
+                                <div className="studio-layers-list"> 
+                                    {stickerLayers.map(({ sticker, index}) => (
+                                        <button key={sticker.id}
+                                            type="button"
+                                            className={"studio-layer-item" +
+                                                (selectedStickerId === sticker.id
+                                                    ? " selected"
+                                                    : ""
+                                                )
+                                            }
+                                            onClick={() => 
+                                                setSelectedStickerId(sticker.id)
+                                            }
+                                        >
+                                            <span className="studio-layer-position">
+                                                {index + 1}
+                                            </span>
+
+                                            <span className="studio-layer-name">
+                                                {stickers.find((asset) => asset.id === sticker.assetId)?.name ?? "Unknown sticker"}
+                                            </span>
+
+                                            {selectedStickerId === sticker.id && (
+                                                <span className="studio-layer-selected">
+                                                    ✓
+                                                </span>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <p className="studio-layers-hint">
+                                    click a layer to select its sticker
+                                </p>
+                            </div>
+                        )}
+
+                        {selectedStickerId !== null && (
+                            <div className="studio-layer-controls"> 
+                                <span className="studio-panel-label">
+                                    stickers layers
+                                </span>
+
+                                <div className="studio-layer-buttons"> 
+                                    <button type="button"
+                                        disabled={selectedStickerIndex <= 0}
+                                        onClick={() => 
+                                            moveStickerLayer(
+                                                selectedStickerId,
+                                                "backward"
+                                            )
+                                        }
+                                    >
+                                        Send backward
+                                    </button>
+
+                                    <button type="button"
+                                        disabled={
+                                            selectedStickerIndex === placedStickers.length-1
+                                        }
+                                        onClick={() => 
+                                            moveStickerLayer(
+                                                selectedStickerId,
+                                                "forward"
+                                            )
+                                        }
+                                    >
+                                        Bring forward
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {selectedStickerId !== null && (
                             <button type="button"
                                 className="studio-remove-sticker"
@@ -710,6 +1106,124 @@ export default function CreativeStudio({
                             >
                                 remove selected sticker
                             </button>
+                        )}
+
+                        {selectedTextId !== null && (
+                            <div className="studio-text-edit-controls">
+                                <span className="studio-panel-label">
+                                    edit text
+                                </span>
+
+                                {placedTexts.filter((item) => item.id === selectedTextId)
+                                    .map((item) => (
+                                        <div key={item.id}>
+                                            <input type="text"
+                                                maxLength={60}
+                                                value={item.text}
+                                                onChange={(event) => {
+                                                    const value = event.target.value;
+                                                    setPlacedTexts((previous) => 
+                                                        previous.map((text) => 
+                                                            text.id === item.id ? {...text, text: value} : text
+                                                        )
+                                                    );
+                                                }}
+                                                placeholder="your text..."
+                                            />
+
+                                            <label>
+                                                font
+                                                <select value={item.font}
+                                                    onChange={(event) => {
+                                                        const font = event.target.value;
+
+                                                        setPlacedTexts((previous) =>
+                                                            previous.map((text) =>
+                                                                text.id === item.id ? {...text, font } : text
+                                                            )
+                                                        );
+                                                    }}
+                                                >
+                                                    <option value="Georgia, serif">
+                                                        Classic
+                                                    </option>
+                                                    <option value="'Comic Sans MS', cursive">
+                                                        Handwritten
+                                                    </option>
+                                                    <option value="'Trebuchet MS', sans-serif">
+                                                        Rounded
+                                                    </option>
+                                                </select>
+                                            </label>
+
+                                            <label>
+                                                color
+                                                <input type="color"
+                                                    value={item.color}
+                                                    onChange={(event) => {
+                                                        const color = event.target.value;
+
+                                                        setPlacedTexts((previous) => 
+                                                            previous.map((text) =>
+                                                                text.id === item.id ? { ...text, color } : text
+                                                            )
+                                                        );
+                                                    }}
+                                                />
+                                            </label>
+
+                                            <label>
+                                                size
+                                                <input type="range"
+                                                    min="10"
+                                                    max="60"
+                                                    value={item.size}
+                                                    onChange={(event) => {
+                                                        const size = Number(event.target.value);
+
+                                                        setPlacedTexts((previous) =>
+                                                            previous.map((text) =>
+                                                                text.id === item.id ? { ...text, size } : text
+                                                            )
+                                                        );
+                                                    }}
+                                                />
+                                            </label>
+
+                                            <label>
+                                                rotation
+                                                <input type="range"
+                                                    min="-180"
+                                                    max="180"
+                                                    value={item.rotation}
+                                                    onChange={(event) => {
+                                                        const rotation = Number(event.target.value);
+
+                                                        setPlacedTexts((previous) => 
+                                                            previous.map((text) => 
+                                                                text.id === item.id ? { ...text, rotation } : text
+                                                            )
+                                                        );
+                                                    }}
+                                                />
+                                            </label>
+
+                                            <button type="button"
+                                                className="studio-remove-sticker"
+                                                onClick={() => {
+                                                    setPlacedTexts((previous) =>
+                                                        previous.filter(
+                                                            (text) => text.id !== item.id
+                                                        )
+                                                    );
+                                                }}
+                                            >
+                                                remove selected text
+                                            </button>
+                                        </div>
+                                    ))
+                                }
+                            </div>
                         )}
                     </div>
 
