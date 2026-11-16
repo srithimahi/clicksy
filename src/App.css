@@ -1807,3 +1807,45 @@ header p {
   outline: none !important;
   box-shadow: none !important;
 }
+
+.studio-text-controls-layer {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 21;
+}
+
+.studio-text-controls-wrapper {
+  position: absolute;
+  border: 2px dashed #d76b9a;
+  border-radius: 5px;
+  padding: 4px;
+  box-sizing: border-box;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+.studio-text-controls-label {
+  display: block;
+  font-size: 22px;
+  white-space: nowrap;
+  visibility: hidden;
+}
+
+.studio-text-controls-layer {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 21;
+}
+
+.studio-text-controls-wrapper {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px dashed #d76b9a;
+  border-radius: 5px;
+  pointer-events: none;
+  transform-origin: center center;
+}

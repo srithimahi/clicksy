@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent } from "react";
 import { themes } from "./themes";
 import { stickers, stickersByTheme } from "./stickers/index";
@@ -119,11 +119,58 @@ export default function CreativeStudio({
     const [selectedStickerId, setSelectedStickerId] = useState<number | null>(null);
     const selectedStickerIndex = placedStickers.findIndex((sticker) => sticker.id === selectedStickerId);
     const selectedSticker = placedStickers.find((sticker) => sticker.id === selectedStickerId);
+    const selectedText = placedTexts.find((text) => text.id === selectedTextId);
     const stickerLayers = placedStickers.map((sticker, index) => ({
         sticker, 
         index,
     })).reverse();
+    useLayoutEffect(() => {
+        if(!selectedText) {
+            setTextControlBounds(null);
+            return;
+        }
+
+        const textElement = Array.from(
+            stripRef.current?.querySelectorAll<HTMLElement>(
+                ".studio-placed-text"
+            ) ?? []
+        ).find(
+            (element) =>
+                    element.dataset.textId === String(selectedText.id)
+        );
+
+        const controlsLayer = textControlsLayerRef.current;
+
+        if(!textElement || !controlsLayer) {
+            return;
+        }
+
+        const textRect = textElement.getBoundingClientRect();
+        const layerRect = controlsLayer.getBoundingClientRect();
+
+        setTextControlBounds({
+            x: textRect.left + textRect.width / 2 - layerRect.left,
+            y: textRect.top + textRect.height / 2 - layerRect.top,
+            width: textElement.offsetWidth,
+            height: textElement.offsetHeight,
+        });
+    }, [
+        selectedTextId,
+        selectedText?.x,
+        selectedText?.y,
+        selectedText?.text,
+        selectedText?.size,
+        selectedText?.font,
+        selectedText?.rotation,
+    ]);
     const stripRef = useRef<HTMLDivElement>(null);
+    const textControlsLayerRef = useRef<HTMLDivElement>(null);
+    const [textControlBounds, setTextControlBounds] = useState<{
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+    } | null>(null);
     const controlsLayerRef = useRef<HTMLDivElement>(null);
     const draggingStickerId = useRef<number | null>(null);
     const textDrag = useRef<{
@@ -611,6 +658,7 @@ export default function CreativeStudio({
                                             color: placed.color,
                                             transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
                                         }}
+                                        data-text-id={placed.id}
                                         onPointerDown={(event) => {
                                             event.preventDefault();
                                             event.stopPropagation();
@@ -698,6 +746,24 @@ export default function CreativeStudio({
                             </div>
                         </div>
 
+                        {selectedText && (
+                            <div className="studio-text-controls-layer"
+                                ref={textControlsLayerRef}
+                            >
+                                {textControlBounds && (
+                                    <div className="studio-text-controls-wrapper"
+                                        style={{
+                                            left: `${textControlBounds.x}px`,
+                                            top: `${textControlBounds.y}px`,
+                                            width: `${textControlBounds.width}px`,
+                                            height: `${textControlBounds.height}px`,
+                                            transform: `translate(-50%, -50%) rotate(${selectedText.rotation}deg)`,
+                                        }}
+                                    />
+                                )}
+                            </div>
+                        )}
+
                         {selectedSticker && (
                             <div className="studio-edit-controls-layer"
                                 ref={controlsLayerRef}
@@ -748,6 +814,8 @@ export default function CreativeStudio({
                                 </div>
                             </div>
                         )}
+
+                        
                     </div>
                 </div>
 
