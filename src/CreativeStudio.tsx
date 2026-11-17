@@ -60,6 +60,11 @@ type PlacedText = {
     color: string;
 }
 
+type StudioSnapshot = {
+    stickers: PlacedSticker[];
+    texts: PlacedText[];
+};
+
 function getBackgroundStyle(background: {
     color: string;
     pattern: "solid" | "gingham";
@@ -112,10 +117,15 @@ export default function CreativeStudio({
     const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
     const [placedTexts, setPlacedTexts] = useState<PlacedText[]>([]);
     const [selectedTextId, setSelectedTextId] = useState<number | null>(null);
-    const stickerHistory = useHistory<PlacedSticker[]>([]);
+    const studioHistory = useHistory<StudioSnapshot>({
+        stickers: [],
+        texts: [],
+    });
+
     useEffect(() => {
-        setPlacedStickers(stickerHistory.current);
-    }, [stickerHistory.current]);
+        setPlacedStickers(studioHistory.current.stickers);
+        setPlacedTexts(studioHistory.current.texts);
+    }, [studioHistory.current]);
     const [selectedStickerId, setSelectedStickerId] = useState<number | null>(null);
     const selectedStickerIndex = placedStickers.findIndex((sticker) => sticker.id === selectedStickerId);
     const selectedSticker = placedStickers.find((sticker) => sticker.id === selectedStickerId);
@@ -173,6 +183,7 @@ export default function CreativeStudio({
     } | null>(null);
     const controlsLayerRef = useRef<HTMLDivElement>(null);
     const draggingStickerId = useRef<number | null>(null);
+    const textGestureStart = useRef<PlacedText[] | null>(null);
     const textDrag = useRef<{
         id: number;
         pointerId: number;
@@ -205,9 +216,25 @@ export default function CreativeStudio({
         startRotation: number;
     } | null>(null);
 
-    function commitStickerChange(nextStickers: PlacedSticker[]) {
+    function commitStudioChange(
+        nextStickers: PlacedSticker[],
+        nextTexts: PlacedText[]
+    ) {
         setPlacedStickers(nextStickers);
-        stickerHistory.push(nextStickers);
+        setPlacedTexts(nextTexts);
+
+        studioHistory.push({
+            stickers: nextStickers,
+            texts: nextTexts,
+        });
+    }
+
+    function commitStickerChange(nextStickers: PlacedSticker[]) {
+        commitStudioChange(nextStickers, placedTexts);
+    }
+
+    function commitTextChange(nextTexts: PlacedText[]) {
+        commitStudioChange(placedStickers, nextTexts);
     }
 
     function moveStickerLayer(
@@ -246,7 +273,26 @@ export default function CreativeStudio({
         const changed = JSON.stringify(before) !== JSON.stringify(placedStickers);
 
         if(changed) {
-            stickerHistory.push(placedStickers);
+            studioHistory.push({
+                stickers: placedStickers,
+                texts: placedTexts,
+            });
+        }
+    }
+
+    function finishTextGesture() {
+        const before = textGestureStart.current;
+        textGestureStart.current = null;
+
+        if(!before) return;
+
+        const changed = JSON.stringify(before) !== JSON.stringify(placedTexts);
+
+        if(changed) {
+            studioHistory.push({
+                stickers: placedStickers,
+                texts: placedTexts,
+            });
         }
     }
 
@@ -276,9 +322,9 @@ export default function CreativeStudio({
             event.preventDefault();
 
             if(event.shiftKey) {
-                stickerHistory.redo();
+                studioHistory.redo();
             } else {
-                stickerHistory.undo();
+                studioHistory.undo();
             }
         }
 
@@ -293,7 +339,7 @@ export default function CreativeStudio({
                 handleHistoryShortcuts
             );
         };
-    }, [stickerHistory.undo, stickerHistory.redo]);
+    }, [studioHistory.undo, studioHistory.redo]);
 
     useEffect(() => {
         function handleDeleteKey(event: KeyboardEvent) {
@@ -321,8 +367,8 @@ export default function CreativeStudio({
 
             event.preventDefault();
 
-            setPlacedTexts((previous) =>
-                previous.filter((text) => text.id !== selectedTextId)
+            commitTextChange(
+                placedTexts.filter((text) => text.id !== selectedTextId)
             );
 
             setSelectedTextId(null);
@@ -335,7 +381,7 @@ export default function CreativeStudio({
         return() => {
             window.removeEventListener("keydown", handleDeleteKey);
         };
-    }, [selectedTextId]);
+    }, [selectedTextId, placedTexts, placedStickers, studioHistory.push]);
 
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
@@ -376,7 +422,7 @@ export default function CreativeStudio({
         return() => {
             window.removeEventListener("keydown", handleKeyDown);
         };
-    }, [selectedStickerId, placedStickers, stickerHistory.push]);
+    }, [selectedStickerId, placedStickers, studioHistory.push]);
 
     function addSticker(assetId: string) {
         const newSticker: PlacedSticker = {
@@ -392,6 +438,7 @@ export default function CreativeStudio({
 
         commitStickerChange(nextStickers);
         setSelectedStickerId(newSticker.id);
+        setSelectedTextId(null);
     }
 
     function addTextSticker() {
@@ -406,7 +453,7 @@ export default function CreativeStudio({
             color: "#A85070",
         };
 
-        setPlacedTexts((previous) => [...previous, newText]);
+        commitTextChange([...placedTexts, newText]);
         setSelectedTextId(newText.id);
         setSelectedStickerId(null);
     }
@@ -805,6 +852,8 @@ export default function CreativeStudio({
                                             setSelectedTextId(placed.id);
                                             setSelectedStickerId(null);
 
+                                            textGestureStart.current = placedTexts;
+
                                             textDrag.current={
                                                 id: placed.id,
                                                 pointerId: event.pointerId,
@@ -855,6 +904,7 @@ export default function CreativeStudio({
                                         onPointerUp={(event) => {
                                             if(textDrag.current?.pointerId === event.pointerId) {
                                                 textDrag.current = null;
+                                                finishTextGesture();
                                             }
 
                                             if(event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -864,6 +914,7 @@ export default function CreativeStudio({
                                         onPointerCancel={(event) => {
                                             if(textDrag.current?.pointerId === event.pointerId) {
                                                 textDrag.current = null;
+                                                finishTextGesture();
                                             }
 
                                             if(event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -1442,8 +1493,8 @@ export default function CreativeStudio({
                                             <button type="button"
                                                 className="studio-remove-sticker"
                                                 onClick={() => {
-                                                    setPlacedTexts((previous) =>
-                                                        previous.filter((text) => text.id !== item.id)
+                                                    commitTextChange(
+                                                        placedTexts.filter((text) => text.id !== item.id)
                                                     );
 
                                                     setSelectedTextId(null);
@@ -1463,16 +1514,16 @@ export default function CreativeStudio({
                     <div className="studio-history-controls">
                         <button
                             type="button"
-                            onClick={stickerHistory.undo}
-                            disabled={!stickerHistory.canUndo}
+                            onClick={studioHistory.undo}
+                            disabled={!studioHistory.canUndo}
                         >
                             ↶ Undo
                         </button>
 
                         <button 
                             type="button"
-                            onClick={stickerHistory.redo}
-                            disabled={!stickerHistory.canRedo}
+                            onClick={studioHistory.redo}
+                            disabled={!studioHistory.canRedo}
                         >
                             ↷ Redo
                         </button>
