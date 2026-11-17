@@ -556,6 +556,8 @@ export default function CreativeStudio({
         event.preventDefault();
         event.stopPropagation();
 
+        textGestureStart.current = placedTexts;
+
         const textElement = Array.from(
             stripRef.current?.querySelectorAll<HTMLElement>(
                 ".studio-placed-text"
@@ -627,6 +629,7 @@ export default function CreativeStudio({
     function finishTextHandleDrag(event: PointerEvent<HTMLButtonElement>) {
         if(textHandleDrag.current?.pointerId === event.pointerId) {
             textHandleDrag.current = null;
+            finishTextGesture();
         }
 
         if(event.currentTarget.hasPointerCapture(event.pointerId)) {
