@@ -1849,3 +1849,10 @@ header p {
   pointer-events: none;
   transform-origin: center center;
 }
+
+.studio-text-controls-wrapper .studio-rotate-handle,
+.studio-text-controls-wrapper .studio-resize-handle {
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 30;
+}

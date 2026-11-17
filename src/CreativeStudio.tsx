@@ -181,6 +181,17 @@ export default function CreativeStudio({
         originalX: number;
         originalY: number;
     } | null>(null);
+    const textHandleDrag = useRef<{
+        id: number,
+        pointerId: number;
+        mode: "resize" | "rotate";
+        centerX: number;
+        centerY: number;
+        startDistance: number;
+        startSize: number;
+        startAngle: number;
+        startRotation: number;
+    } | null>(null); 
     const gestureStart = useRef<PlacedSticker[] | null>(null);
 
     const editingHandle = useRef<{
@@ -283,6 +294,48 @@ export default function CreativeStudio({
             );
         };
     }, [stickerHistory.undo, stickerHistory.redo]);
+
+    useEffect(() => {
+        function handleDeleteKey(event: KeyboardEvent) {
+            if(event.key !== "Delete" && event.key !== "Backspace") {
+                return;
+            }
+
+            const target = event.target;
+
+            if(target instanceof HTMLElement &&
+                (target.closest("input, textarea, select") ||
+                    target.isContentEditable
+                )
+            ) {
+                return;
+            }
+
+            if(event.ctrlKey || event.metaKey || event.altKey) {
+                return;
+            }
+
+            if(selectedTextId === null) {
+                return;
+            }
+
+            event.preventDefault();
+
+            setPlacedTexts((previous) =>
+                previous.filter((text) => text.id !== selectedTextId)
+            );
+
+            setSelectedTextId(null);
+            textHandleDrag.current = null;
+            textDrag.current = null;
+        }
+
+        window.addEventListener("keydown", handleDeleteKey);
+
+        return() => {
+            window.removeEventListener("keydown", handleDeleteKey);
+        };
+    }, [selectedTextId]);
 
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
@@ -446,6 +499,92 @@ export default function CreativeStudio({
         };
 
         event.currentTarget.setPointerCapture(event.pointerId);
+    }
+
+    function startTextHandleDrag(
+        event: PointerEvent<HTMLButtonElement>,
+        text: PlacedText,
+        mode: "resize" | "rotate"
+    ) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const textElement = Array.from(
+            stripRef.current?.querySelectorAll<HTMLElement>(
+                ".studio-placed-text"
+            ) ?? []
+        ).find(
+            (element) => element.dataset.textId === String(text.id)
+        );
+
+        if(!textElement) {
+            return;
+        }
+
+        const rect = textElement.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        const dx = event.clientX - centerX;
+        const dy = event.clientY - centerY;
+
+        textHandleDrag.current = {
+            id: text.id,
+            pointerId: event.pointerId,
+            mode,
+            centerX,
+            centerY,
+            startDistance: Math.max(1, Math.hypot(dx, dy)),
+            startSize: text.size,
+            startAngle: Math.atan2(dy, dx),
+            startRotation: text.rotation,
+        };
+
+        event.currentTarget.setPointerCapture(event.pointerId);
+    }
+
+    function moveTextHandle(event: PointerEvent<HTMLButtonElement>) {
+        const drag = textHandleDrag.current;
+
+        if(!drag || drag.pointerId !== event.pointerId) {
+            return;
+        }
+
+        const dx = event.clientX - drag.centerX;
+        const dy = event.clientY - drag.centerY;
+
+        if(drag.mode === "resize") {
+            const distance = Math.hypot(dx, dy);
+            const nextSize = Math.max(
+                10,
+                Math.min(100, drag.startSize * distance / drag.startDistance)
+            );
+
+            setPlacedTexts((previous) =>
+                previous.map((item) =>
+                    item.id === drag.id ? { ...item, size: Math.round(nextSize) } : item
+                )
+            );
+        } else {
+            const angle = Math.atan2(dy, dx);
+            const degrees = (angle - drag.startAngle) * 180 / Math.PI;
+
+            setPlacedTexts((previous) => 
+                previous.map((item) =>
+                    item.id === drag.id ? { ...item, rotation: drag.startRotation +degrees } : item
+                )
+            );
+        }
+    }
+
+    function finishTextHandleDrag(event: PointerEvent<HTMLButtonElement>) {
+        if(textHandleDrag.current?.pointerId === event.pointerId) {
+            textHandleDrag.current = null;
+        }
+
+        if(event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
     }
 
     function moveHandle(event: PointerEvent<HTMLButtonElement>) {
@@ -759,7 +898,31 @@ export default function CreativeStudio({
                                             height: `${textControlBounds.height}px`,
                                             transform: `translate(-50%, -50%) rotate(${selectedText.rotation}deg)`,
                                         }}
-                                    />
+                                    >
+                                        <button type="button"
+                                            className="studio-rotate-handle"
+                                            aria-label="Rotate text"
+                                            onPointerDown={(event) => 
+                                                startTextHandleDrag(event, selectedText, "rotate")
+                                            }
+                                            onPointerMove={moveTextHandle}
+                                            onPointerUp={finishTextHandleDrag}
+                                            onPointerCancel={finishTextHandleDrag}
+                                        >
+                                            ↻
+                                        </button>
+
+                                        <button type="button"
+                                            className="studio-resize-handle"
+                                            aria-label="Resize text"
+                                            onPointerDown={(event) => 
+                                                startTextHandleDrag(event, selectedText, "resize")
+                                            }
+                                            onPointerMove={moveTextHandle}
+                                            onPointerUp={finishTextHandleDrag}
+                                            onPointerCancel={finishTextHandleDrag}
+                                        />
+                                    </div>
                                 )}
                             </div>
                         )}
@@ -1280,10 +1443,12 @@ export default function CreativeStudio({
                                                 className="studio-remove-sticker"
                                                 onClick={() => {
                                                     setPlacedTexts((previous) =>
-                                                        previous.filter(
-                                                            (text) => text.id !== item.id
-                                                        )
+                                                        previous.filter((text) => text.id !== item.id)
                                                     );
+
+                                                    setSelectedTextId(null);
+                                                    textHandleDrag.current = null;
+                                                    textDrag.current = null;
                                                 }}
                                             >
                                                 remove selected text

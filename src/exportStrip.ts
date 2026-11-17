@@ -156,6 +156,35 @@ export async function exportStrip({
         ctx.restore();
     }
 
+    const textElements = Array.from(stripElement.querySelectorAll<HTMLElement>(".studio-placed.text"));
+
+    for(const textElement of textElements) {
+        const style = getComputedStyle(textElement);
+        const rect = textElement.getBoundingClientRect();
+
+        const x = parseFloat(textElement.style.left) / 100 * bounds.width;
+        const y = parseFloat(textElement.style.top) / 100 * bounds.height;
+
+        const rotation = parseFloat(textElement.style.transform.match(/rotate\(([-\d.]+)deg\)/)?.[1] ?? "0");
+
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.rect(0, 0, bounds.width, bounds.height);
+        ctx.clip();
+
+        ctx.translate(x, y);
+        ctx.rotate(rotation * Math.PI / 180);
+
+        ctx.fillStyle = style.color;
+        ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        ctx.fillText(textElement.textContent ?? "", 0, 0);
+        ctx.restore();
+    }
+
     const footer = stripElement.querySelector<HTMLElement>(
         ".studio-strip-brand"
     );
