@@ -1,4 +1,5 @@
 type ExportSticker = {
+    id: number;
     assetId: string;
     x: number;
     y: number;
@@ -10,6 +11,7 @@ type ExportOptions = {
     stripElement: HTMLDivElement;
     stickers: ExportSticker[];
     stickerAssets: { id: string; svg: string }[];
+    layers: { id: number; type: "sticker" | "text"; }[];
 }
 
 function loadImage(src: string) : Promise<HTMLImageElement> {
@@ -25,6 +27,7 @@ export async function exportStrip({
     stripElement,
     stickers,
     stickerAssets,
+    layers,
 }: ExportOptions) {
     const bounds = stripElement.getBoundingClientRect();
     if(!bounds.width || !bounds.height) {
@@ -156,33 +159,69 @@ export async function exportStrip({
         ctx.restore();
     }
 
-    const textElements = Array.from(stripElement.querySelectorAll<HTMLElement>(".studio-placed.text"));
+    const textElements = Array.from(stripElement.querySelectorAll<HTMLElement>(".studio-placed-text"));
 
-    for(const textElement of textElements) {
-        const style = getComputedStyle(textElement);
-        const rect = textElement.getBoundingClientRect();
+    for(const layer of layers) {
+        if(layer.type === "sticker") {
+            const placed = stickers.find((sticker) => sticker.id === layer.id);
+            if(!placed) {
+                continue;
+            }
 
-        const x = parseFloat(textElement.style.left) / 100 * bounds.width;
-        const y = parseFloat(textElement.style.top) / 100 * bounds.height;
+            const asset = stickerAssets.find((item) => item.id === placed.assetId);
+            if(!asset) { 
+                continue;
+            }
 
-        const rotation = parseFloat(textElement.style.transform.match(/rotate\(([-\d.]+)deg\)/)?.[1] ?? "0");
+            const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(asset.svg);
+            const image = await loadImage(url);
+            const centerX = (placed.x / 100) * bounds.width;
+            const centerY = (placed.y / 100) * bounds.height;
 
-        ctx.save();
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate((placed.rotation * Math.PI) / 180);
 
-        ctx.beginPath();
-        ctx.rect(0, 0, bounds.width, bounds.height);
-        ctx.clip();
+            ctx.drawImage(
+                image,
+                -placed.size / 2,
+                -placed.size / 2,
+                placed.size,
+                placed.size
+            );
 
-        ctx.translate(x, y);
-        ctx.rotate(rotation * Math.PI / 180);
+            ctx.restore();
+        } else {
+            const textElement = textElements.find((element) => element.dataset.textId === String(layer.id));
+            if(!textElement) {
+                continue;
+            }
 
-        ctx.fillStyle = style.color;
-        ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
+            const style = getComputedStyle(textElement);
+            const x = (parseFloat(textElement.style.left) / 100) * bounds.width;
+            const y = (parseFloat(textElement.style.top) / 100) * bounds.height;
 
-        ctx.fillText(textElement.textContent ?? "", 0, 0);
-        ctx.restore();
+            const rotation = parseFloat(textElement.style.transform.match(
+                /rotate\(([-\d.]+)deg\)/
+            )?.[1] ?? "0");
+
+            ctx.save();
+
+            ctx.beginPath();
+            ctx.rect(0, 0, bounds.width, bounds.height);
+            ctx.clip();
+
+            ctx.translate(x, y);
+            ctx.rotate((rotation * Math.PI) / 180);
+
+            ctx.fillStyle = style.color;
+            ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            ctx.fillText(textElement.textContent ?? "", 0, 0);
+            ctx.restore();
+        }
     }
 
     const footer = stripElement.querySelector<HTMLElement>(

@@ -143,7 +143,11 @@ export default function CreativeStudio({
         setLayerOrder(studioHistory.current.layers);
     }, [studioHistory.current]);
     const [selectedStickerId, setSelectedStickerId] = useState<number | null>(null);
-    const selectedStickerIndex = placedStickers.findIndex((sticker) => sticker.id === selectedStickerId);
+    const selectedLayer = selectedTextId !== null ? {id: selectedTextId, type: "text" as const}
+        : selectedStickerId !== null ? {id: selectedStickerId, type: "sticker" as const} : null;
+    const selectedLayerIndex = selectedLayer ? layerOrder.findIndex((layer) =>
+        layer.id === selectedLayer.id && layer.type === selectedLayer.type
+    ) : -1;
     const selectedSticker = placedStickers.find((sticker) => sticker.id === selectedStickerId);
     const selectedText = placedTexts.find((text) => text.id === selectedTextId);
     const studioLayers = [...layerOrder].reverse().flatMap<StudioLayerItem>((layer) => {
@@ -289,31 +293,26 @@ export default function CreativeStudio({
         commitStudioChange(placedStickers, nextTexts, nextLayers);
     }
 
-    function moveStickerLayer(
+    function moveStudioLayer(
         id: number,
+        type: "sticker" | "text",
         direction: "forward" | "backward"
     ) {
-        const currentIndex = placedStickers.findIndex(
-            (sticker) => sticker.id === id
-        );
-
-        if(currentIndex === -1) return;
-
-        const nextIndex = direction === "forward" ? currentIndex + 1 : currentIndex - 1;
-
-        if(nextIndex < 0 || nextIndex >= placedStickers.length) {
+        const currentIndex = layerOrder.findIndex((layer) => layer.id === id && layer.type === type);
+        if(currentIndex === -1) {
             return;
         }
 
-        const nextStickers = [...placedStickers];
+        const nextIndex = direction === "forward" ? currentIndex + 1 : currentIndex - 1;
 
-        [nextStickers[currentIndex], nextStickers[nextIndex]] = [
-            nextStickers[nextIndex],
-            nextStickers[currentIndex],
-        ];
+        if(nextIndex < 0 || nextIndex >= layerOrder.length) {
+            return;
+        }
 
-        commitStickerChange(nextStickers);
-        setSelectedStickerId(id);
+        const nextLayers = [...layerOrder];
+
+        [nextLayers[currentIndex], nextLayers[nextIndex]] = [nextLayers[nextIndex], nextLayers[currentIndex],];
+        commitStudioChange(placedStickers, placedTexts, nextLayers);
     }
 
     function finishStickerGesture() {
@@ -794,6 +793,7 @@ export default function CreativeStudio({
                 stripElement: stripRef.current,
                 stickers: placedStickers,
                 stickerAssets: stickers,
+                layers: layerOrder,
             });
         } catch (error) {
             console.error("export failed: ", error);
@@ -1454,32 +1454,32 @@ export default function CreativeStudio({
                             </div>
                         )}
 
-                        {selectedStickerId !== null && (
-                            <div className="studio-layer-controls"> 
+                        {selectedLayer && selectedLayerIndex !== -1 && (
+                            <div className="studio-layer-controls">
                                 <span className="studio-panel-label">
-                                    stickers layers
+                                    arrange layers
                                 </span>
 
-                                <div className="studio-layer-buttons"> 
+                                <div className="studio-layer-buttons">
                                     <button type="button"
-                                        disabled={selectedStickerIndex <= 0}
-                                        onClick={() => 
-                                            moveStickerLayer(
-                                                selectedStickerId,
+                                        disabled={selectedLayerIndex === 0} 
+                                        onClick={() =>
+                                            moveStudioLayer(
+                                                selectedLayer.id,
+                                                selectedLayer.type,
                                                 "backward"
                                             )
                                         }
                                     >
-                                        Send backward
+                                        send backward
                                     </button>
 
                                     <button type="button"
-                                        disabled={
-                                            selectedStickerIndex === placedStickers.length-1
-                                        }
+                                        disabled={selectedLayerIndex === layerOrder.length - 1}
                                         onClick={() => 
-                                            moveStickerLayer(
-                                                selectedStickerId,
+                                            moveStudioLayer(
+                                                selectedLayer.id,
+                                                selectedLayer.type,
                                                 "forward"
                                             )
                                         }
@@ -1578,6 +1578,7 @@ export default function CreativeStudio({
                                                         const nextTexts = placedTexts.map((text) =>
                                                             text.id === item.id ? {...text, color} : text
                                                         );
+                                                        commitTextChange(nextTexts);
                                                     }}
                                                 />
                                             </label>
