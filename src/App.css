@@ -1856,3 +1856,29 @@ header p {
   touch-action: none;
   z-index: 30;
 }
+
+.studio-branding-control {
+  margin: 18px;
+  padding: 14px 16px;
+  background: #fff7f9;
+  border: 1px solid #f2dce3;
+  border-radius: 14px;
+}
+
+.studio-branding-control label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #9c5971;
+  font-weight: 600;
+}
+
+.studio-branding-control input {
+  width: 16px;
+  height: 16px;
+  accent-color: #d9799c;
+  cursor: pointer;
+}
+

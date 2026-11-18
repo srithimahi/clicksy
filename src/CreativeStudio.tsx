@@ -63,6 +63,18 @@ type PlacedText = {
 type StudioSnapshot = {
     stickers: PlacedSticker[];
     texts: PlacedText[];
+    layers: StudioLayer[];
+};
+
+type StudioLayer = {
+    id: number;
+    type: "sticker" | "text";
+};
+
+type StudioLayerItem = {
+    id: number;
+    type: "sticker" | "text";
+    name: string;
 };
 
 function getBackgroundStyle(background: {
@@ -113,27 +125,55 @@ export default function CreativeStudio({
         (background) => background.id === selectedBackgroundId 
     ) ?? selectedTheme.backgrounds[0];
     const [selectedFilterId, setSelectedFilterId] = useState<PhotoFilterId>("original");
+    const [showBranding, setShowBranding] = useState(true);
     const activeFilter = PHOTO_FILTERS[selectedFilterId].css;
     const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
     const [placedTexts, setPlacedTexts] = useState<PlacedText[]>([]);
+    const [layerOrder, setLayerOrder] = useState<StudioLayer[]>([]);
     const [selectedTextId, setSelectedTextId] = useState<number | null>(null);
     const studioHistory = useHistory<StudioSnapshot>({
         stickers: [],
         texts: [],
+        layers: [],
     });
 
     useEffect(() => {
         setPlacedStickers(studioHistory.current.stickers);
         setPlacedTexts(studioHistory.current.texts);
+        setLayerOrder(studioHistory.current.layers);
     }, [studioHistory.current]);
     const [selectedStickerId, setSelectedStickerId] = useState<number | null>(null);
     const selectedStickerIndex = placedStickers.findIndex((sticker) => sticker.id === selectedStickerId);
     const selectedSticker = placedStickers.find((sticker) => sticker.id === selectedStickerId);
     const selectedText = placedTexts.find((text) => text.id === selectedTextId);
-    const stickerLayers = placedStickers.map((sticker, index) => ({
-        sticker, 
-        index,
-    })).reverse();
+    const studioLayers = [...layerOrder].reverse().flatMap<StudioLayerItem>((layer) => {
+        if(layer.type === "sticker") {
+            const sticker = placedStickers.find((item) => item.id === layer.id);
+            if(!sticker) {
+                return [];
+            }
+
+            return[{
+                id: layer.id,
+                type: "sticker" as const,
+                name: stickers.find(
+                    (asset) => asset.id === sticker.assetId
+                )?.name ?? "Unknown sticker",
+            }];
+        }
+
+        const text = placedTexts.find((item) => item.id === layer.id);
+        if(!text) {
+            return [];
+        }
+
+        return[{
+            id: layer.id,
+            type: "text" as const,
+            name: text.text || "Empty text",
+        }];
+    });
+
     useLayoutEffect(() => {
         if(!selectedText) {
             setTextControlBounds(null);
@@ -184,6 +224,7 @@ export default function CreativeStudio({
     const controlsLayerRef = useRef<HTMLDivElement>(null);
     const draggingStickerId = useRef<number | null>(null);
     const textGestureStart = useRef<PlacedText[] | null>(null);
+    const textSliderStart = useRef<PlacedText[] | null>(null);
     const textDrag = useRef<{
         id: number;
         pointerId: number;
@@ -218,23 +259,34 @@ export default function CreativeStudio({
 
     function commitStudioChange(
         nextStickers: PlacedSticker[],
-        nextTexts: PlacedText[]
+        nextTexts: PlacedText[],
+        nextLayers: StudioLayer[] = layerOrder
     ) {
         setPlacedStickers(nextStickers);
         setPlacedTexts(nextTexts);
+        setLayerOrder(nextLayers);
 
         studioHistory.push({
             stickers: nextStickers,
             texts: nextTexts,
+            layers: nextLayers,
         });
     }
 
     function commitStickerChange(nextStickers: PlacedSticker[]) {
-        commitStudioChange(nextStickers, placedTexts);
+        const ids = new Set(nextStickers.map((sticker) => sticker.id));
+        const nextLayers = layerOrder.filter(
+            (layer) => layer.type !== "sticker" || ids.has(layer.id)
+        );
+        commitStudioChange(nextStickers, placedTexts, nextLayers);
     }
 
     function commitTextChange(nextTexts: PlacedText[]) {
-        commitStudioChange(placedStickers, nextTexts);
+        const ids = new Set(nextTexts.map((text) => text.id));
+        const nextLayers = layerOrder.filter(
+            (layer) => layer.type !== "text" || ids.has(layer.id)
+        );
+        commitStudioChange(placedStickers, nextTexts, nextLayers);
     }
 
     function moveStickerLayer(
@@ -276,6 +328,7 @@ export default function CreativeStudio({
             studioHistory.push({
                 stickers: placedStickers,
                 texts: placedTexts,
+                layers: layerOrder,
             });
         }
     }
@@ -292,6 +345,43 @@ export default function CreativeStudio({
             studioHistory.push({
                 stickers: placedStickers,
                 texts: placedTexts,
+                layers: layerOrder,
+            });
+        }
+    }
+
+    function finishTextTyping() {
+        const before = textGestureStart.current;
+        textGestureStart.current = null;
+
+        if(!before) {
+            return;
+        }
+
+        const changed = JSON.stringify(before) !== JSON.stringify(placedTexts);
+
+        if(changed) {
+            studioHistory.push({
+                stickers: placedStickers,
+                texts: placedTexts,
+                layers: layerOrder,
+            });
+        }
+    }
+
+    function finishTextSlider() {
+        const before = textSliderStart.current;
+        textSliderStart.current = null;
+
+        if(!before) {
+            return;
+        }
+
+        if(JSON.stringify(before) !== JSON.stringify(placedTexts)) {
+            studioHistory.push({
+                stickers: placedStickers,
+                texts: placedTexts,
+                layers: layerOrder, 
             });
         }
     }
@@ -436,7 +526,11 @@ export default function CreativeStudio({
 
         const nextStickers = [...placedStickers, newSticker];
 
-        commitStickerChange(nextStickers);
+        commitStudioChange(
+            nextStickers,
+            placedTexts,
+            [...layerOrder, {id: newSticker.id, type: "sticker"}]
+        );
         setSelectedStickerId(newSticker.id);
         setSelectedTextId(null);
     }
@@ -453,7 +547,11 @@ export default function CreativeStudio({
             color: "#A85070",
         };
 
-        commitTextChange([...placedTexts, newText]);
+        commitStudioChange(
+            placedStickers,
+            [...placedTexts, newText],
+            [...layerOrder, {id: newText.id, type: "text"}]
+        );
         setSelectedTextId(newText.id);
         setSelectedStickerId(null);
     }
@@ -787,6 +885,9 @@ export default function CreativeStudio({
                                                 width: `${placed.size}px`,
                                                 height: `${placed.size}px`,
                                                 transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
+                                                zIndex: layerOrder.findIndex(
+                                                    (layer) => layer.type === "sticker" && layer.id === placed.id
+                                                ) + 1,
                                             }}
                                             onPointerDown={(event) => {
                                                 if(event.target !== event.currentTarget) return;
@@ -846,6 +947,9 @@ export default function CreativeStudio({
                                             fontFamily: placed.font,
                                             color: placed.color,
                                             transform: `translate(-50%, -50%) rotate(${placed.rotation}deg)`,
+                                            zIndex: layerOrder.findIndex(
+                                                (layer) => layer.type === "text" && layer.id === placed.id
+                                            ) + 1,
                                         }}
                                         data-text-id={placed.id}
                                         onPointerDown={(event) => {
@@ -930,13 +1034,15 @@ export default function CreativeStudio({
                                 ))}
                             </div>
 
-                            <div className="studio-strip-brand"
-                                style={{
-                                    color: selectedTheme.textColor,
-                                }}
-                            >
-                                clicksy
-                            </div>
+                            {showBranding && (
+                                <div className="studio-strip-brand"
+                                    style={{
+                                        color: selectedTheme.textColor,
+                                    }}
+                                >
+                                    clicksy
+                                </div>
+                            )}
                         </div>
 
                         {selectedText && (
@@ -1292,7 +1398,7 @@ export default function CreativeStudio({
                             </div>
                         )}
 
-                        {placedStickers.length > 0 && (
+                        {studioLayers.length > 0 && (
                             <div className="studio-layer-panel"> 
                                 <div className="studio-layer-heading"> 
                                     <span className="studio-panel-label">
@@ -1300,43 +1406,50 @@ export default function CreativeStudio({
                                     </span>
 
                                     <span className="studio-layers-count">
-                                        {placedStickers.length} stickers
+                                        {studioLayers.length} elements
                                     </span>
                                 </div>
 
-                                <div className="studio-layers-list"> 
-                                    {stickerLayers.map(({ sticker, index}) => (
-                                        <button key={sticker.id}
-                                            type="button"
-                                            className={"studio-layer-item" +
-                                                (selectedStickerId === sticker.id
-                                                    ? " selected"
-                                                    : ""
-                                                )
-                                            }
-                                            onClick={() => 
-                                                setSelectedStickerId(sticker.id)
-                                            }
-                                        >
-                                            <span className="studio-layer-position">
-                                                {index + 1}
-                                            </span>
+                                <div className="studio-layers-list">
+                                    {studioLayers.map((layer) => {
+                                        const selected = layer.type === "sticker" ? selectedStickerId === layer.id : selectedTextId === layer.id;
 
-                                            <span className="studio-layer-name">
-                                                {stickers.find((asset) => asset.id === sticker.assetId)?.name ?? "Unknown sticker"}
-                                            </span>
-
-                                            {selectedStickerId === sticker.id && (
-                                                <span className="studio-layer-selected">
-                                                    ✓
+                                        return(
+                                            <button key={`${layer.type}-${layer.id}`}
+                                                type="button"
+                                                className={
+                                                    "studio-layer-item" + (selected ? " selected" : "")
+                                                }
+                                                onClick={() => {
+                                                    if(layer.type === "sticker") {
+                                                        setSelectedStickerId(layer.id);
+                                                        setSelectedTextId(null);
+                                                    } else {
+                                                        setSelectedTextId(layer.id);
+                                                        setSelectedStickerId(null);
+                                                    }
+                                                }}
+                                            >
+                                                <span className="studio-layer-position">
+                                                    {layer.type === "text" ? "Aa" : ""}
                                                 </span>
-                                            )}
-                                        </button>
-                                    ))}
+
+                                                <span className="studio-layer-name">
+                                                    {layer.name}
+                                                </span>
+
+                                                {selected && (
+                                                    <span className="studio-layer-selected">
+                                                        ✓
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
 
                                 <p className="studio-layers-hint">
-                                    click a layer to select its sticker
+                                    click a layer to select its element
                                 </p>
                             </div>
                         )}
@@ -1405,13 +1518,20 @@ export default function CreativeStudio({
                                             <input type="text"
                                                 maxLength={60}
                                                 value={item.text}
+                                                onFocus={() => {
+                                                    textGestureStart.current = placedTexts;
+                                                }}
                                                 onChange={(event) => {
                                                     const value = event.target.value;
+
                                                     setPlacedTexts((previous) => 
                                                         previous.map((text) => 
-                                                            text.id === item.id ? {...text, text: value} : text
+                                                            text.id === item.id ? {...text, text: value } : text
                                                         )
                                                     );
+                                                }}
+                                                onBlur={() => {
+                                                    finishTextTyping();
                                                 }}
                                                 placeholder="your text..."
                                             />
@@ -1421,12 +1541,15 @@ export default function CreativeStudio({
                                                 <select value={item.font}
                                                     onChange={(event) => {
                                                         const font = event.target.value;
+                                                        if(font === item.font) {
+                                                            return;
+                                                        }
 
-                                                        setPlacedTexts((previous) =>
-                                                            previous.map((text) =>
-                                                                text.id === item.id ? {...text, font } : text
-                                                            )
+                                                        const nextTexts = placedTexts.map((text) =>
+                                                            text.id === item.id ? {...text, font} : text
                                                         );
+
+                                                        commitTextChange(nextTexts);
                                                     }}
                                                 >
                                                     <option value="Georgia, serif">
@@ -1448,10 +1571,12 @@ export default function CreativeStudio({
                                                     onChange={(event) => {
                                                         const color = event.target.value;
 
-                                                        setPlacedTexts((previous) => 
-                                                            previous.map((text) =>
-                                                                text.id === item.id ? { ...text, color } : text
-                                                            )
+                                                        if(color === item.color) {
+                                                            return;
+                                                        }
+
+                                                        const nextTexts = placedTexts.map((text) =>
+                                                            text.id === item.id ? {...text, color} : text
                                                         );
                                                     }}
                                                 />
@@ -1463,15 +1588,24 @@ export default function CreativeStudio({
                                                     min="10"
                                                     max="60"
                                                     value={item.size}
+                                                    onPointerDown={() => {
+                                                        textSliderStart.current = placedTexts;
+                                                    }}
+                                                    onKeyDown={() => {
+                                                        if(!textSliderStart.current) {
+                                                            textSliderStart.current = placedTexts;
+                                                        }
+                                                    }}
                                                     onChange={(event) => {
                                                         const size = Number(event.target.value);
-
                                                         setPlacedTexts((previous) =>
                                                             previous.map((text) =>
-                                                                text.id === item.id ? { ...text, size } : text
+                                                                text.id === item.id ? {...text, size} : text
                                                             )
                                                         );
                                                     }}
+                                                    onPointerUp={finishTextSlider}
+                                                    onKeyUp={finishTextSlider}
                                                 />
                                             </label>
 
@@ -1481,15 +1615,24 @@ export default function CreativeStudio({
                                                     min="-180"
                                                     max="180"
                                                     value={item.rotation}
+                                                    onPointerDown={() => {
+                                                        textSliderStart.current = placedTexts;
+                                                    }}
+                                                    onKeyDown={() => {
+                                                        if(!textSliderStart.current) { 
+                                                            textSliderStart.current = placedTexts;
+                                                        }
+                                                    }}
                                                     onChange={(event) => {
                                                         const rotation = Number(event.target.value);
-
-                                                        setPlacedTexts((previous) => 
-                                                            previous.map((text) => 
-                                                                text.id === item.id ? { ...text, rotation } : text
+                                                        setPlacedTexts((previous) =>
+                                                            previous.map((text) =>
+                                                                text.id === item.id ? {...text, rotation} : text
                                                             )
                                                         );
                                                     }}
+                                                    onPointerUp={finishTextSlider}
+                                                    onKeyUp={finishTextSlider}
                                                 />
                                             </label>
 
@@ -1530,6 +1673,18 @@ export default function CreativeStudio({
                         >
                             ↷ Redo
                         </button>
+                    </div>
+                    <div className="studio-branding-control">
+                        <label htmlFor="clicksy-branding">
+                            <input id="clicksy-branding"
+                                type="checkbox"
+                                checked={showBranding}
+                                onChange={(event) =>
+                                    setShowBranding(event.target.checked)
+                                }
+                            />
+                            <span>show Clicksy branding</span>
+                        </label>
                     </div>
                     <button type="button"
                         className="studio-download-button"
