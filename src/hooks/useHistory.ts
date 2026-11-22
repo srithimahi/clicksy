@@ -37,11 +37,19 @@ export function useHistory<T>(initialValue: T, limit = 50) {
         }));
     }, []);
 
+    const reset = useCallback((value: T) => {
+        setState({
+            history: [value],
+            index: 0,
+        });
+    }, []);
+
     return {
         current: state.history[state.index],
         push,
         undo,
         redo,
+        reset,
         canUndo: state.index > 0,
         canRedo: state.index < state.history.length - 1,
     }

@@ -4,6 +4,8 @@ import { themes } from "./themes";
 import { stickers, stickersByTheme } from "./stickers/index";
 import {exportStrip} from "./exportStrip";
 import { useHistory } from "./hooks/useHistory";
+import { loadStudioData, saveStudioData, saveGalleryCreation, } from "./studioStorage";
+import type { SavedStudioCreation as GallerySavedCreation } from "./creationTypes";
 
 const PHOTO_FILTERS = {
     original: {
@@ -38,6 +40,8 @@ type PhotoFilterId = keyof typeof PHOTO_FILTERS;
 type CreativeStudioProps = {
     onBack: () => void;
     photos: string[];
+    isNewSession: boolean;
+    initialCreation?: GallerySavedCreation | null;
 }
 
 type PlacedSticker = {
@@ -77,6 +81,28 @@ type StudioLayerItem = {
     name: string;
 };
 
+type SavedStudioCreation = {
+    version: 1;
+    id?: string;
+    name?: string;
+    createdAt?: number;
+    thumbnail?: string;
+    photos: string[];
+    themeId: string;
+    backgroundSelections: Record<string, string>;
+    filterId: PhotoFilterId;
+    showBranding: boolean;
+    stickers: PlacedSticker[];
+    texts: PlacedText[];
+    layers: StudioLayer[];
+};
+
+const STUDIO_SAVE_KEY = "current-creation";
+
+function createCreationId(): string {
+    return crypto.randomUUID();
+}
+
 function getBackgroundStyle(background: {
     color: string;
     pattern: "solid" | "gingham";
@@ -114,6 +140,8 @@ function getBackgroundStyle(background: {
 export default function CreativeStudio({
     onBack,
     photos,
+    isNewSession,
+    initialCreation = null,
 }: CreativeStudioProps) {
     const [selectedTheme, setSelectedTheme] = useState(themes[0]);
     const [backgroundSelections, setBackgroundSelections] = 
@@ -126,6 +154,10 @@ export default function CreativeStudio({
     ) ?? selectedTheme.backgrounds[0];
     const [selectedFilterId, setSelectedFilterId] = useState<PhotoFilterId>("original");
     const [showBranding, setShowBranding] = useState(true);
+    const [showSaveForm, setShowSaveForm] = useState(false);
+    const [creationName, setCreationName] = useState("my little creation");
+    const [saveMessage, setSaveMessage] = useState(""); 
+    const [studioReady, setStudioReady] = useState(false);
     const activeFilter = PHOTO_FILTERS[selectedFilterId].css;
     const [placedStickers, setPlacedStickers] = useState<PlacedSticker[]>([]);
     const [placedTexts, setPlacedTexts] = useState<PlacedText[]>([]);
@@ -142,6 +174,113 @@ export default function CreativeStudio({
         setPlacedTexts(studioHistory.current.texts);
         setLayerOrder(studioHistory.current.layers);
     }, [studioHistory.current]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function restoreCreation() {
+            try {
+                if(initialCreation) {
+                    const saved = initialCreation;
+                    const restoredTheme = themes.find((theme) => theme.id === saved.themeId);
+                    if(restoredTheme) {
+                        setSelectedTheme(restoredTheme);
+                    }
+
+                    setBackgroundSelections(saved.backgroundSelections ?? {});
+                    if(saved.filterId in PHOTO_FILTERS) {
+                        setSelectedFilterId(saved.filterId as PhotoFilterId);
+                    }
+
+                    setShowBranding(saved.showBranding);
+
+                    studioHistory.reset({
+                        stickers: saved.stickers ?? [],
+                        texts: saved.texts ?? [],
+                        layers: saved.layers ?? [],
+                    });
+
+                    return;
+                }
+
+                if(isNewSession) {
+                    return;
+                }
+
+                const saved = await loadStudioData<SavedStudioCreation>(STUDIO_SAVE_KEY);
+                if(!saved || saved.version !== 1 || cancelled) {
+                    return;
+                }
+
+                const restoredTheme = themes.find((theme) => theme.id === saved.themeId);
+                if(restoredTheme) {
+                    setSelectedTheme(restoredTheme);
+                }
+
+                setBackgroundSelections(saved.backgroundSelections ?? {});
+                if(saved.filterId in PHOTO_FILTERS) {
+                    setSelectedFilterId(saved.filterId);
+                }
+
+                setShowBranding(saved.showBranding);
+                studioHistory.reset({
+                    stickers: saved.stickers ?? [],
+                    texts: saved.texts ?? [],
+                    layers: saved.layers ?? [],
+                });
+            } catch(error) {
+                console.error("Could not restore your creation", error);
+            } finally {
+                if(!cancelled) {
+                    setStudioReady(true);
+                }
+            }
+        }
+
+        void restoreCreation();
+
+        return() => {
+            cancelled = true;
+        }
+    }, [studioHistory.reset, isNewSession, initialCreation]);
+
+    useEffect(() => {
+        if(!studioReady) {
+            return;
+        }
+
+        const timeout = window.setTimeout(() => {
+            const creation: SavedStudioCreation = {
+                version: 1,
+                photos,
+                themeId: selectedTheme.id,
+                backgroundSelections,
+                filterId: selectedFilterId,
+                showBranding,
+                stickers: studioHistory.current.stickers,
+                texts: studioHistory.current.texts,
+                layers: studioHistory.current.layers,
+            };
+
+            void saveStudioData(
+                STUDIO_SAVE_KEY,
+                creation
+            ).catch((error) => {
+                console.error("Could not autosave your creation: ", error);
+            });
+        }, 500);
+
+        return() => window.clearTimeout(timeout);
+    }, [
+        studioReady,
+        photos,
+        selectedTheme,
+        backgroundSelections,
+        selectedFilterId,
+        showBranding,
+        studioHistory.current,
+    ]);
+
     const [selectedStickerId, setSelectedStickerId] = useState<number | null>(null);
     const selectedLayer = selectedTextId !== null ? {id: selectedTextId, type: "text" as const}
         : selectedStickerId !== null ? {id: selectedStickerId, type: "sticker" as const} : null;
@@ -228,6 +367,12 @@ export default function CreativeStudio({
     const controlsLayerRef = useRef<HTMLDivElement>(null);
     const draggingStickerId = useRef<number | null>(null);
     const textGestureStart = useRef<PlacedText[] | null>(null);
+    const studioClipboard = useRef<
+        | { type: "sticker"; item: PlacedSticker }
+        | { type: "text"; item: PlacedText }
+        | null
+    >(null);
+    const pasteCount = useRef(0);
     const textSliderStart = useRef<PlacedText[] | null>(null);
     const textDrag = useRef<{
         id: number;
@@ -313,6 +458,133 @@ export default function CreativeStudio({
 
         [nextLayers[currentIndex], nextLayers[nextIndex]] = [nextLayers[nextIndex], nextLayers[currentIndex],];
         commitStudioChange(placedStickers, placedTexts, nextLayers);
+    }
+
+    function duplicateSelectedLayer() {
+        if(selectedStickerId !== null) {
+            const original = placedStickers.find(
+                (sticker) => sticker.id === selectedStickerId
+            );
+
+            if(!original) {
+                return;
+            }
+
+            const copy = {
+                ...original,
+                id: Date.now() + Math.random(),
+                x: Math.min(100, original.x + 5),
+                y: Math.min(100, original.y + 5),
+            };
+
+            commitStudioChange(
+                [...placedStickers, copy],
+                placedTexts,
+                [...layerOrder, {id: copy.id, type: "sticker"}]
+            );
+
+            setSelectedStickerId(copy.id);
+            setSelectedTextId(null);
+            return;
+        }
+
+        if(selectedTextId !== null) {
+            const original = placedTexts.find(
+                (text) => text.id === selectedTextId
+            );
+
+            if(!original) {
+                return;
+            }
+
+            const copy = {
+                ...original,
+                id: Date.now() + Math.random(),
+                x: Math.min(100, original.x + 5),
+                y: Math.min(100, original.y + 5),
+            };
+
+            commitStudioChange(
+                placedStickers,
+                [...placedTexts, copy],
+                [...layerOrder, {id: copy.id, type: "text"}]
+            );
+
+            setSelectedTextId(copy.id);
+            setSelectedStickerId(null);
+        }
+    }
+
+    function copySelectedLayer() {
+        if(selectedTextId !== null) {
+            const original = placedTexts.find((text) => text.id === selectedTextId);
+            if(!original) {
+                return;
+            }
+
+            studioClipboard.current = {
+                type: "text",
+                item: {...original},
+            };
+        } else if(selectedStickerId !== null) {
+            const original = placedStickers.find((sticker) => sticker.id === selectedStickerId);
+            if(!original) {
+                return;
+            }
+
+            studioClipboard.current = {
+                type: "sticker",
+                item: {...original},
+            };
+        } else {
+            return;
+        }
+
+        pasteCount.current = 0;
+    }
+
+    function pasteCopiedLayer() {
+        const copied = studioClipboard.current;
+        if(!copied) {
+            return;
+        }
+
+        pasteCount.current += 1;
+        const offset = pasteCount.current * 5;
+
+        if(copied.type === "sticker") {
+            const copy: PlacedSticker = {
+                ...copied.item,
+                id: Date.now() + Math.random(),
+                x: Math.min(100, copied.item.x + offset),
+                y: Math.min(100, copied.item.y + offset),
+            };
+
+            commitStudioChange(
+                [...placedStickers, copy],
+                placedTexts,
+                [...layerOrder, {id: copy.id, type: "sticker"}]
+            );
+
+            setSelectedStickerId(copy.id);
+            setSelectedTextId(null);
+        } else {
+            const copy: PlacedText = {
+                ...copied.item,
+                id: Date.now() + Math.random(),
+                x: Math.min(100, copied.item.x + offset),
+                y: Math.min(100, copied.item.y + offset),
+            };
+
+            commitStudioChange(
+                placedStickers,
+                [...placedTexts, copy], 
+                [...layerOrder, {id: copy.id, type: "text"}]
+            );
+
+            setSelectedTextId(copy.id);
+            setSelectedStickerId(null);
+        }
     }
 
     function finishStickerGesture() {
@@ -512,6 +784,69 @@ export default function CreativeStudio({
             window.removeEventListener("keydown", handleKeyDown);
         };
     }, [selectedStickerId, placedStickers, studioHistory.push]);
+
+    useEffect(() => {
+        function handleStudioShortcuts(event: KeyboardEvent) {
+            const target = event.target;
+
+            if(target instanceof HTMLElement && (
+                target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)
+            )) {
+                return;
+            }
+
+            if(event.key === "Escape") {
+                setSelectedStickerId(null);
+                setSelectedTextId(null);
+                return;
+            }
+
+            if(!(event.ctrlKey || event.metaKey) || event.altKey) {
+                return;
+            }
+
+            const key = event.key.toLowerCase();
+
+            if(key === "c") {
+                if(selectedStickerId === null && selectedTextId === null) {
+                    return;
+                }
+
+                event.preventDefault();
+                copySelectedLayer();
+            }
+
+            if(key === "v") {
+                if(!studioClipboard.current) {
+                    return;
+                }
+
+                event.preventDefault();
+                pasteCopiedLayer();
+            }
+
+            if(key === "d") {
+                if(selectedStickerId === null && selectedTextId === null) {
+                    return;
+                }
+
+                event.preventDefault();
+                duplicateSelectedLayer();
+            }
+        }
+
+        window.addEventListener("keydown", handleStudioShortcuts);
+
+        return() => {
+            window.removeEventListener("keydown", handleStudioShortcuts);
+        };
+    }, [
+        selectedStickerId,
+        selectedTextId,
+        placedStickers,
+        placedTexts,
+        layerOrder
+    ]);
 
     function addSticker(assetId: string) {
         const newSticker: PlacedSticker = {
@@ -785,6 +1120,84 @@ export default function CreativeStudio({
         };
     }
 
+    const isEditingSavedCreation = Boolean(initialCreation?.id);
+
+    async function saveChanges() {
+        if(!initialCreation?.id) {
+            return;
+        }
+
+        const now = Date.now();
+
+        const updatedCreation: SavedStudioCreation = {
+            version: 1,
+            id: initialCreation.id,
+            name: initialCreation.name ?? "untitled memory",
+            createdAt: initialCreation.createdAt ?? now,
+            photos: [...photos],
+            themeId: selectedTheme.id,
+            backgroundSelections: { ...backgroundSelections },
+            filterId: selectedFilterId,
+            showBranding,
+            stickers: placedStickers.map((sticker) => ({...sticker})),
+            texts: placedTexts.map((text) => ({...text})),
+            layers: layerOrder.map((layer) => ({...layer})),
+        };
+
+        try {
+            setSaveMessage("");
+            await saveGalleryCreation({
+                id: initialCreation.id,
+                name: updatedCreation.name ?? "untitled memory",
+                createdAt: updatedCreation.createdAt ?? now,
+                updatedAt: now,
+                data: updatedCreation,
+            });
+
+            setSaveMessage("Changes saved successfully");
+        } catch(error) {
+            console.error("Could not save changes: ", error);
+        }
+    }
+
+    async function saveToGallery() {
+        const trimmedName = creationName.trim() || "untitled creation";
+        const now = Date.now();
+
+        const creation: SavedStudioCreation = {
+            version: 1,
+            id: createCreationId(),
+            name: trimmedName,
+            createdAt: now,
+            thumbnail: undefined,
+            photos: [...photos],
+            themeId: selectedTheme.id,
+            backgroundSelections: {...backgroundSelections},
+            filterId: selectedFilterId,
+            showBranding,
+            stickers: placedStickers.map((sticker) => ({...sticker})),
+            texts: placedTexts.map((text) => ({...text})),
+            layers: layerOrder.map((layer) => ({...layer})),
+        };
+
+        try {
+            await saveGalleryCreation({
+                id: creation.id!,
+                name: trimmedName,
+                createdAt: now,
+                updatedAt: now,
+                data: creation,
+            });
+            setShowSaveForm(false);
+            setSaveMessage("Saved to my Creations");
+            console.log("Creation saved successfully!", trimmedName);
+
+        } catch(error) {
+            setSaveMessage("Couldn't save your creation. Try again!")
+            console.error("Could not save to gallery: ", error);
+        }
+    }
+
     async function downloadCreation() {
         if(!stripRef.current) return;
 
@@ -897,6 +1310,7 @@ export default function CreativeStudio({
                                                 gestureStart.current = placedStickers;
                                                 draggingStickerId.current = placed.id;
                                                 setSelectedStickerId(placed.id);
+                                                setSelectedTextId(null);
                                                 event.currentTarget.setPointerCapture(event.pointerId);
                                             }}
                                             onPointerMove={(event) => {
@@ -927,6 +1341,7 @@ export default function CreativeStudio({
 
                                                     draggingStickerId.current = placed.id;
                                                     setSelectedStickerId(placed.id);
+                                                    setSelectedTextId(null);
 
                                                     event.currentTarget.parentElement?.setPointerCapture(
                                                         event.pointerId
@@ -1490,6 +1905,15 @@ export default function CreativeStudio({
                             </div>
                         )}
 
+                        {selectedLayer && (
+                            <button type="button"
+                                className="studio-duplicate-button"
+                                onClick={duplicateSelectedLayer}
+                            >
+                                Duplicate selected
+                            </button>
+                        )}
+
                         {selectedStickerId !== null && (
                             <button type="button"
                                 className="studio-remove-sticker"
@@ -1687,12 +2111,78 @@ export default function CreativeStudio({
                             <span>show Clicksy branding</span>
                         </label>
                     </div>
+
+                    {showSaveForm && (
+                        <div className="studio-save-form">
+                            <label htmlFor="creation-name">
+                                name your creation!
+                            </label>
+                            
+                            <input id="creation-name"
+                                type="text"
+                                maxLength={60}
+                                value={creationName}
+                                onChange={(event) =>
+                                    setCreationName(event.target.value)
+                                }
+                                placeholder="my memory"
+                            />
+
+                            <button type="button"
+                                className="studio-download-button"
+                                onClick={() => void saveToGallery()}
+                            >
+                                Confirm Save
+                            </button>
+
+                            <button type="button"
+                                onClick={() => setShowSaveForm(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    )}
+
+                    {isEditingSavedCreation && (
+                        <button type="button"
+                            className="studio-download-button"
+                            onClick={() => void saveChanges()}
+                        >
+                            Save Changes
+                        </button>
+                    )}
+
+                    {!showSaveForm && (
+                        <button type="button"
+                            className="studio-download-button"
+                            onClick={() => setShowSaveForm(true)}
+                        >
+                            {isEditingSavedCreation
+                                ? "Save as New Creation"
+                                : "Save to my Creations"
+                            }
+                        </button>
+                    )}
                     <button type="button"
                         className="studio-download-button"
                         onClick={downloadCreation}
                     > 
                         Download your creation!
                     </button>
+
+                    {saveMessage && (
+                        <p role="status"
+                            aria-live="polite"
+                            style={{
+                                textAlign: "center",
+                                fontSize: "13px",
+                                color: saveMessage.startsWith(".") ? "#a34c70" : "#b42318",
+                                marginTop: "10px",
+                            }}
+                        >
+                            {saveMessage}
+                        </p>
+                    )}
                 </aside>
             </section>
         </main>

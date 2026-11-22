@@ -12,6 +12,7 @@ type ExportOptions = {
     stickers: ExportSticker[];
     stickerAssets: { id: string; svg: string }[];
     layers: { id: number; type: "sticker" | "text"; }[];
+    download?: boolean;
 }
 
 function loadImage(src: string) : Promise<HTMLImageElement> {
@@ -28,7 +29,8 @@ export async function exportStrip({
     stickers,
     stickerAssets,
     layers,
-}: ExportOptions) {
+    download = true,
+}: ExportOptions): Promise<string | void> {
     const bounds = stripElement.getBoundingClientRect();
     if(!bounds.width || !bounds.height) {
         throw new Error("Photo strip has no visible dimensions");
@@ -128,37 +130,6 @@ export async function exportStrip({
         ctx.restore();
     }
 
-    for(const placed of stickers) {
-        const asset = stickerAssets.find(
-            (item) => item.id === placed.assetId
-        );
-
-        if(!asset) continue;
-
-        const url = "data:image/svg+xml;charset=utf-8," +
-            encodeURIComponent(asset.svg);
-
-        const image = await loadImage(url);
-
-        const centerX = (placed.x / 100) * bounds.width;
-        const centerY = (placed.y / 100) * bounds.height;
-
-        ctx.save();
-
-        ctx.translate(centerX, centerY);
-        ctx.rotate((placed.rotation * Math.PI) / 180);
-
-        ctx.drawImage(
-            image,
-            -placed.size / 2,
-            -placed.size / 2,
-            placed.size,
-            placed.size
-        );
-
-        ctx.restore();
-    }
-
     const textElements = Array.from(stripElement.querySelectorAll<HTMLElement>(".studio-placed-text"));
 
     for(const layer of layers) {
@@ -244,10 +215,36 @@ export async function exportStrip({
         );
     }
 
+    if(!download) {
+        const thumbnailCanvas = document.createElement("canvas");
+
+        thumbnailCanvas.width = 240;
+        thumbnailCanvas.height = Math.round(240 * (canvas.height / canvas.width));
+
+        const thumbnailContext = thumbnailCanvas.getContext("2d");
+
+        if(!thumbnailContext) {
+            throw new Error("Thumbnail canvas is unavailable");
+        }
+
+        thumbnailContext.drawImage(
+            canvas,
+            0,
+            0,
+            thumbnailCanvas.width,
+            thumbnailCanvas.height
+        );
+
+        return thumbnailCanvas.toDataURL("image/jpeg", 0.8);
+    }
+
     const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((result) => {
-            if(result) resolve(result);
-            else reject(new Error("PNG export failed"));
+            if(result) {
+                resolve(result);
+            } else {
+                reject(new Error("PNG export failed"));
+            }
         }, "image/png");
     });
 
@@ -256,6 +253,7 @@ export async function exportStrip({
 
     link.href = url;
     link.download = "clicksy-creation.png";
+
     document.body.appendChild(link);
     link.click();
     link.remove();
