@@ -1129,11 +1129,28 @@ export default function CreativeStudio({
 
         const now = Date.now();
 
+        let thumbnail: string | undefined;
+
+        if(stripRef.current) {
+            try {
+                thumbnail = await exportStrip({
+                    stripElement: stripRef.current,
+                    stickers: placedStickers,
+                    stickerAssets: stickers,
+                    layers: layerOrder,
+                    download: false,
+                }) as string;
+            } catch(error) {
+                console.error("Could not generate thumbnail: ", error);
+            }
+        }
+
         const updatedCreation: SavedStudioCreation = {
             version: 1,
             id: initialCreation.id,
             name: initialCreation.name ?? "untitled memory",
             createdAt: initialCreation.createdAt ?? now,
+            thumbnail: thumbnail ?? initialCreation.thumbnail,
             photos: [...photos],
             themeId: selectedTheme.id,
             backgroundSelections: { ...backgroundSelections },
@@ -1164,12 +1181,28 @@ export default function CreativeStudio({
         const trimmedName = creationName.trim() || "untitled creation";
         const now = Date.now();
 
+        let thumbnail: string | undefined;
+
+        if(stripRef.current) {
+            try {
+                thumbnail = await exportStrip({
+                    stripElement: stripRef.current,
+                    stickers: placedStickers,
+                    stickerAssets: stickers,
+                    layers: layerOrder,
+                    download: false,
+                }) as string;
+            } catch(error) {
+                console.error("Could not generate a thumbnail: ", error);
+            }
+        }
+
         const creation: SavedStudioCreation = {
             version: 1,
             id: createCreationId(),
             name: trimmedName,
             createdAt: now,
-            thumbnail: undefined,
+            thumbnail,
             photos: [...photos],
             themeId: selectedTheme.id,
             backgroundSelections: {...backgroundSelections},
