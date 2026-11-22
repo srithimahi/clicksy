@@ -113,7 +113,7 @@ export default function CreationsGallery({
     }
 
     return(
-        <main className="studio-page">
+        <main className="studio-page gallery-page">
             <header className="studio-header">
                 <button type="button"
                     className="studio-back"
@@ -127,7 +127,13 @@ export default function CreationsGallery({
                 </span>
             </header>
 
-            <section style={{ padding: "32px", maxWidth: "1100px", margin: "0 auto"}}>
+            <section style={{ 
+                padding: "32px 24px",
+                width: "100%",
+                maxWidth: "1400px",
+                margin: "0 auto",
+                boxSizing: "border-box",
+            }}>
                 <h1>my creations</h1>
                 <p>all your creations in one place!</p>
 
@@ -141,13 +147,22 @@ export default function CreationsGallery({
                 {!loading && !error && (
                     <div style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
                         gap: "20px",
                         marginTop: "24px",
+                        width: "100%",
+                        maxHeight: "70vh",
+                        overflowY: "auto",
+                        overflowX: "hidden",
+
+                        padding: "8px 12px 16px 8px",
+                        boxSizing: "border-box",
+                        alignContent: "start",
                     }}
                     >
                         {creations.map((creation) => (
                             <article key={creation.id}
+                                className="gallery-creation-card"
                                 onClick={() => onOpenCreation(creation.data)}
                                 role="button"
                                 tabIndex={0}
@@ -163,6 +178,8 @@ export default function CreationsGallery({
                                     borderRadius: "18px",
                                     padding: "16px",
                                     cursor: "pointer",
+                                    boxShadow: "0 4px 14px rgba(163, 76, 112, 0.08)",
+                                    transition: "transform 0.25s ease, box-shadow 0.25s ease",
                                 }}
                             >
                                 {creation.data.thumbnail ? (
@@ -254,101 +271,85 @@ export default function CreationsGallery({
                 )}
 
                 {renameId && (
-                    <form onSubmit={(event) => {
-                        event.preventDefault();
-                        void handleRename();
-                    }}
-                    style={{
-                        marginTop: "24px",
-                        padding: "20px",
-                        background: "#fff0f5",
-                        border: "1px solid #e9a5ba",
-                        borderRadius: "16px",
-                        textAlign: "center",
-                    }}
-                    >
-                        <h2>rename your strip</h2>
-
-                        <input type="text"
-                            value={newName}
-                            maxLength={60}
-                            onChange={(event) => 
-                                setNewName(event.target.value)
-                            }
-                            placeholder="my strip"
-                            style={{
-                                padding: "10px",
-                                borderRadius: "10px",
-                                border: "1px solid #e9a5ba",
+                    <div className="gallery-modal-overlay">
+                        <form className="gallery-modal"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="gallery-rename-title"
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                void handleRename();
                             }}
-                        />
-
-                        <div style={{
-                            display: "flex",
-                            justifyContent: "center",
-                            gap: "12px",
-                            marginTop: "16px",
-                        }}
                         >
-                            <button type="button"
-                                onClick={() => setRenameId(null)}
-                            >
-                                cancel
-                            </button>
+                            <h2 id="gallery-rename-title">
+                                rename your strip
+                            </h2>
 
-                            <button type="submit"
-                                disabled={!newName.trim()}
-                            >
-                                Save Name
-                            </button>
-                        </div>
-                    </form>
+                            <p>give your strip a new name</p>
+
+                            <input type="text"
+                                value={newName}
+                                maxLength={60}
+                                onChange={(event) => setNewName(event.target.value)}
+                                placeholder="my strip"
+                                autoFocus 
+                            />
+
+                            <div className="gallery-modal-actions">
+                                <button type="button"
+                                    className="gallery-modal-cancel"
+                                    onClick={() => setRenameId(null)}
+                                >
+                                    cancel
+                                </button>
+
+                                <button type="submit"
+                                    className="gallery-modal-confirm"
+                                    disabled={!newName.trim()}
+                                >
+                                    save name
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 )}
 
                 {deleteId && (
-                    <div role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="delete-confirm-title"
-                        style={{
-                            marginTop: "24px",
-                            padding: "20px",
-                            background: "#fff0f5",
-                            border: "1px solid #e9a5ba",
-                            borderRadius: "16px",
-                            textAlign: "center",
-                        }}
-                    >
-                        <h2 id="delete-confirm-title">
-                            delete this memory?
-                        </h2>
-
-                        <p>
-                            this will permanently remove it from your saved creations.
-                        </p>
-
-                        <div style={{
-                                display: "flex",
-                                justifyContent: "center",
-                                gap: "12px",
-                                marginTop: "16px",
-                            }}
+                    <div className="gallery-modal-overlay">
+                        <div className="gallery-modal"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="gallery-delete-title"
                         >
-                            <button type="button"
-                                disabled={deleting}
-                                onClick={() => setDeleteId(null)}
-                            >
-                                Keep it
-                            </button>
+                            <h2 id="gallery-delete-title">
+                                delete this memory?
+                            </h2>
 
-                            <button type="button"
-                                disabled={deleting}
-                                onClick={() => void handleDelete()}
-                            >
-                                {deleting ? "deleting..." : "Yes, delete"}
-                            </button>
+                            <p>
+                                Are you sure? This creation will be permanently deleted.
+                            </p>
+
+                            <div className="gallery-modal-actions">
+                                <button type="button"
+                                    className="gallery-modal-cancel"
+                                    disabled={deleting}
+                                    onClick={() => setDeleteId(null)}
+                                >
+                                    keep it
+                                </button>
+
+                                <button type="button"
+                                    className="gallery-modal-danger"
+                                    disabled={deleting}
+                                    onClick={() => void handleDelete()}
+                                >
+                                    {deleting ? "deleting..." : "yes, delete"}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
+                   
             </section>
         </main>
     );

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { generateStrip } from "./strip";
+import { generateStrip, type QuickFilter, type QuickFrame } from "./strip";
 
 type BoothProps = {
     onBack: () => void;
@@ -12,6 +12,24 @@ const stripColors = [
     { name: "Lavender", hex: "#E6D9FF" },
     { name: "Daffodil", hex: "#FFF0B8" },
     { name: "Dahlia", hex: "#292535" },
+
+    { name: "Peach", hex: "#ffd6ba" },
+    { name: "Baby blue", hex: "#c9e7ff" },
+    { name: "Mint", hex: "#cdeedb" },
+    { name: "Strawberry", hex: "#e88da5" },
+    { name: "Buttercream", hex: "#fff4d6" },
+    { name: "Mocha", hex: "#a55a32" },
+    { name: "Cherry", hex: "#a83250" },
+];
+
+const quickFilters: { id: QuickFilter; name: string}[] = [
+    {id: "none", name: "Original"},
+    {id: "warm", name: "Warm"},
+    {id: "cool", name: "Cool"},
+    {id: "bw", name: "B&W"},
+    {id: "sepia", name: "Sepia"},
+    {id: "vintage", name: "Vintage"},
+    {id: "retro", name: "Retro"},
 ];
 
 function Booth({ onBack, onOpenStudio }: BoothProps) {
@@ -26,6 +44,8 @@ function Booth({ onBack, onOpenStudio }: BoothProps) {
     const [isCapturing, setIsCapturing] = useState(false);
 
     const [stripColor, setStripColor] = useState("#FFFFFF");
+    const [selectedFilter, setSelectedFilter] = useState<QuickFilter>("none");
+    const [selectedFrame, setSelectedFrame] = useState<QuickFrame>("classic");
     const [stripPreview, setStripPreview] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
@@ -96,7 +116,7 @@ function Booth({ onBack, onOpenStudio }: BoothProps) {
                 setIsGenerating(true);
 
                 try{
-                    const preview = await generateStrip(photos, stripColor);
+                    const preview = await generateStrip(photos, stripColor, selectedFilter, selectedFrame);
 
                     if(!cancelled) {
                         setStripPreview(preview);
@@ -115,7 +135,7 @@ function Booth({ onBack, onOpenStudio }: BoothProps) {
             return() => {
                 cancelled = true;
             };
-        }, [photos, stripColor]);
+        }, [photos, stripColor, selectedFilter, selectedFrame]);
 
     function capturePhoto(): string | null {
         const video = videoRef.current;
@@ -425,9 +445,9 @@ function Booth({ onBack, onOpenStudio }: BoothProps) {
                                 {stripColors.map((color) => (
                                     <button key={color.name}
                                         type="button"
-                                        className={`strip-color $(
-                                            stripColor === color.hex ? "selected" : ""    
-                                        )`}
+                                        className={`strip-color ${
+                                            stripColor === color.hex ? "selected" : ""
+                                        }`}
                                         style={{ backgroundColor: color.hex }}
                                         onClick={() => setStripColor(color.hex)}
                                         aria-label={`${color.name} strip color`}
@@ -442,6 +462,49 @@ function Booth({ onBack, onOpenStudio }: BoothProps) {
                                     (color) => color.hex === stripColor
                                 )?.name}
                             </p>
+
+                            <div className="quick-booth-options">
+                                <h3>Pick your filter</h3>
+
+                                <div className="quick-filter-options">
+                                    {quickFilters.map((filter) => (
+                                        <button key={filter.id}
+                                            type="button"
+                                            className={`quick-option ${
+                                                selectedFilter === filter.id ? "selected" : ""
+                                            }`}
+                                            onClick={() => setSelectedFilter(filter.id)}
+                                            aria-pressed={selectedFilter === filter.id}
+                                        >
+                                            {filter.name}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <h3>pick your frame</h3>
+
+                                <div className="quick-frame-options">
+                                    <button type="button"
+                                        className={`quick-option ${
+                                            selectedFrame === "classic" ? "selected" : ""
+                                        }`}
+                                        onClick={() => setSelectedFrame("classic")}
+                                        aria-pressed={selectedFrame === "classic"}
+                                    >
+                                        Classic
+                                    </button>
+
+                                    <button type="button"
+                                        className={`quick-option ${
+                                            selectedFrame === "retro-film" ? "selected" : ""
+                                        }`}
+                                        onClick={() => setSelectedFrame("retro-film")}
+                                        aria-pressed={selectedFrame === "retro-film"}
+                                    >
+                                        Retro Film
+                                    </button>
+                                </div>
+                            </div>
 
                             <div className="retake-selection">
                                 <h3>not quite the moment?</h3>
